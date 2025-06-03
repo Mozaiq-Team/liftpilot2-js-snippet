@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Web Page</title>
+    <script src="liftPilotTracker.js"></script>
+  </head>
+  <body>
+    <h1>Welcome to My Web Page</h1>
+    <p>LIFTPILOT v2.0</p>
+    <button id="trackButton">Track Lift Pilot</button>
+
+    <script>
+      LPTracker.init({ url: "http://localhost:3030/api/" });
+
+      const button = document.getElementById("trackButton");
+      button.addEventListener("click", function () {
+        console.log("Lift Pilot tracking started.");
+        LPTracker.sendEvent("HERO_CTA4", "click", {
+          buttonId: "trackButton",
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      window.addEventListener("DOMContentLoaded", async function () {
+        console.log("Page loaded successfully.");
+        const eventFromDb = await LPTracker.getEvents({
+          eventName: "HERO_CTA4",
+        });
+
+        if (eventFromDb.length > 0) {
+          button.innerText = "Track Lift Pilot (Events Found)";
+        }
+
+        console.log("Events from database:", eventFromDb);
+      });
+    </script>
+  </body>
+</html>
