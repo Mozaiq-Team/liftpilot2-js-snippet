@@ -1,0 +1,26 @@
+{
+  "name": "liftpilot2-js-snippet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "liftPilotTracker.js",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-env": "^7.27.2",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@vitejs/plugin-legacy": "^6.1.1",
+    "core-js": "^3.42.0",
+    "regenerator-runtime": "^0.14.1",
+    "vite": "^6.3.5",
+    "whatwg-fetch": "^3.6.20"
+  },
+  "dependencies": {
+    "ulid": "^2.4.0"
+  }
+}
