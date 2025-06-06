@@ -5,7 +5,9 @@
   "main": "liftPilotTracker.js",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "lint": "eslint ./src --fix"
   },
   "keywords": [],
   "author": "",
@@ -13,9 +15,14 @@
   "devDependencies": {
     "@babel/core": "^7.27.4",
     "@babel/preset-env": "^7.27.2",
+    "@eslint/js": "^9.28.0",
     "@rollup/plugin-babel": "^6.0.4",
     "@vitejs/plugin-legacy": "^6.1.1",
     "core-js": "^3.42.0",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "globals": "^16.2.0",
     "regenerator-runtime": "^0.14.1",
     "vite": "^6.3.5",
     "whatwg-fetch": "^3.6.20"

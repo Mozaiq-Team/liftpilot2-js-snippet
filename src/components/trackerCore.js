@@ -2,54 +2,14 @@ import "core-js/features/promise";
 import "core-js/features/url-search-params";
 import "whatwg-fetch";
 import "regenerator-runtime/runtime";
-import { ulid } from "ulid";
+
+import { getCookie, setCookie } from "./cookie.js";
+import { generateId } from "./idGenerator.js";
+import { setupRouteTracking } from "./routeTracker.js";
+import { setupFormTracking } from "./formTracker.js";
 
 let BASE_URL = "";
 const COOKIE_NAME = "LP_COOKIE";
-
-/**
- * generateId:
- *  - if the browser supports crypto.randomUUID(), use it.
- *  - otherwise, fall back to ulid().
- */
-function generateId() {
-  // 1) In modern browsers use randomUUID()
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-
-  // 2) As a final fallback (IE11), use ulid:
-  return ulid();
-}
-
-/**
- * Read a cookie by name. Returns null if not found.
- */
-function getCookie(name) {
-  const matches = document.cookie.match(
-    new RegExp(
-      "(?:^|; )" + name.replace(/([.$?*|{}()[]\\\/+^])/g, "\\$1") + "=([^;]*)",
-    ),
-  );
-  return matches ? decodeURIComponent(matches[1]) : null;
-}
-
-/**
- * Set a cookie (default expiration = 365 days, path = "/").
- */
-function setCookie(name, value, days = 365) {
-  let expires = "";
-  if (typeof days === "number") {
-    const date = new Date();
-    date.setTime(date.getTime() + days * 864e5);
-    expires = "; expires=" + date.toUTCString();
-  }
-  document.cookie =
-    name + "=" + encodeURIComponent(value) + expires + "; path=/";
-}
 
 /**
  * Initialize with a base URL and ensure LP_COOKIE exists.
@@ -69,6 +29,11 @@ function init(options) {
     cookieVal = generateId();
     setCookie(COOKIE_NAME, cookieVal);
   }
+
+  // Setup route tracking
+  setupRouteTracking();
+  // Setup form tracking
+  setupFormTracking();
 }
 
 /**
@@ -136,7 +101,4 @@ async function getEvents(queryParams) {
   });
 }
 
-// Expose these three methods on window.LPTracker
-const LPTracker = { init, sendEvent, getEvents };
-window.LPTracker = LPTracker;
-export default LPTracker;
+export { init, sendEvent, getEvents };
