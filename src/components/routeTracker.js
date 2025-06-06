@@ -1,4 +1,4 @@
-import { sendEvent } from "./trackerCore.js"; // assume trackerCore exports sendEvent
+import { sendEvent } from "./trackerCore.js";
 
 let _initialized = false;
 function _trackRouteChange() {
