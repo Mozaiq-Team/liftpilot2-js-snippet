@@ -34,6 +34,7 @@ function setupFormTracking() {
   document.addEventListener(
     "submit",
     (e) => {
+      console.log('form submitted');
       const form = e.target;
       if (!(form instanceof HTMLFormElement)) return;
 
@@ -46,6 +47,7 @@ function setupFormTracking() {
 
       // Only send if at least one of name or email is present
       if (nameValue || emailValue) {
+        console.log("Form submission captured");
         sendEvent("form_submit", "form", {
           name: nameValue,
           email: emailValue,

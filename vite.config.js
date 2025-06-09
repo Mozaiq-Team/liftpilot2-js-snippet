@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     target: "es2015", // Vite’s default for bundling, Babel will handle ES5 transpilation
     lib: {
-      entry: path.resolve(__dirname, "src/lptracker.js"),
+      entry: path.resolve(__dirname, "src/index.js"),
       name: "LPTracker",
       fileName: () => "lptracker.js",
       formats: ["iife"],
