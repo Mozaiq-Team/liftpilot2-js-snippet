@@ -13,8 +13,16 @@ function extractNameValue(form) {
   if (nameValue) return nameValue;
 
   // 2) Next, try firstName + lastName
-  const firstName = getTrimmedValue(form, 'input[name="firstName"]');
-  const lastName = getTrimmedValue(form, 'input[name="lastName"]');
+  let firstName = getTrimmedValue(form, 'input[name="firstName"]');
+  let lastName = getTrimmedValue(form, 'input[name="lastName"]');
+
+  if (firstName === "") {
+    firstName = getTrimmedValue(form, 'input[name="first_name"]');
+  }
+  if (lastName === "") {
+    firstName = getTrimmedValue(form, 'input[name="last_name"]');
+  }
+
   if (firstName || lastName) {
     // Join with a space even if one is empty
     return [firstName, lastName].filter(Boolean).join(" ");
@@ -22,6 +30,9 @@ function extractNameValue(form) {
 
   // 3) If neither first/last pair, try fullName
   nameValue = getTrimmedValue(form, 'input[name="fullName"]');
+  if (nameValue === "") {
+    nameValue = getTrimmedValue(form, 'input[name="full_name"]');
+  }
   return nameValue;
 }
 
@@ -34,7 +45,7 @@ function setupFormTracking() {
   document.addEventListener(
     "submit",
     (e) => {
-      console.log('form submitted');
+      console.log("form submitted");
       const form = e.target;
       if (!(form instanceof HTMLFormElement)) return;
 
@@ -45,12 +56,22 @@ function setupFormTracking() {
       // Grab the name field
       let nameValue = extractNameValue(form);
 
+      // Grab the company name
+      let companyName = getTrimmedValue(form, 'input[name="company"]');
+      if (companyName === "") {
+        companyName = getTrimmedValue(form, 'input[name="company_name"]');
+      }
+
       // Only send if at least one of name or email is present
-      if (nameValue || emailValue) {
+      if (nameValue || emailValue || companyName) {
         console.log("Form submission captured");
-        sendEvent("form_submit", "form", {
-          name: nameValue,
-          email: emailValue,
+        sendEvent("form_submit", {
+          formId: form.id || "unknown",
+          fields: {
+            name: nameValue,
+            email: emailValue,
+            company: companyName,
+          },
         }).catch((err) => {
           console.error("Form‐submit tracking failed:", err);
         });

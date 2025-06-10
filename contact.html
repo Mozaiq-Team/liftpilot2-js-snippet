@@ -25,6 +25,13 @@
         required
       />
       <input
+        type="text"
+        name="company"
+        id="company"
+        placeholder="Company Name"
+        required
+      />
+      <input
         type="email"
         name="email"
         id="email"
@@ -36,7 +43,7 @@
 
     <script type="module">
       import LPTracker from "./src/index.js";
-      LPTracker.init({ url: "http://localhost:3030/api/" });
+      LPTracker.init({ url: "http://localhost:3000/api/v1/" });
 
       const form = document.getElementById("contactForm");
       form.addEventListener("submit", function (event) {

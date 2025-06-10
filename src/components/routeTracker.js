@@ -4,9 +4,9 @@ let _initialized = false;
 function _trackRouteChange() {
   const fullPath =
     window.location.pathname + window.location.search + window.location.hash;
-  console.log("route change detected:", fullPath);
-  sendEvent("route_change", "navigation", { path: fullPath }).catch((err) => {
-    console.error("Route-change tracking failed:", err);
+  console.log("page visit detected:", fullPath);
+  sendEvent("page_visit", { uri: fullPath }).catch((err) => {
+    console.error("Page visit tracking failed:", err);
   });
 }
 
@@ -20,7 +20,7 @@ export function setupRouteTracking() {
     !window.addEventListener
   ) {
     console.warn(
-      "Route tracking requires history.pushState, history.replaceState, and window.addEventListener support.",
+      "Page visit tracking requires history.pushState, history.replaceState, and window.addEventListener support.",
     );
     return;
   }

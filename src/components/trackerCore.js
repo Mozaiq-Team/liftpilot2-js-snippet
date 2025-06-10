@@ -43,7 +43,7 @@ function init(options) {
  * @param {any} data
  * @returns {Promise<any>}
  */
-async function sendEvent(name, type, data) {
+async function sendEvent(name, data) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
@@ -53,14 +53,14 @@ async function sendEvent(name, type, data) {
     return Promise.reject(new Error("Event name must be a non-empty string"));
   }
 
-  const payload = { eventName: name, eventType: type, eventData: data };
   const cookieVal = getCookie(COOKIE_NAME) || "";
+  const payload = { cid: cookieVal, name, value: data };
 
   return fetch(`${BASE_URL}/events`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-LP-Cookie": cookieVal, // send the cookie value here
+      // "X-LP-Cookie": cookieVal, // send the cookie value here
     },
     body: JSON.stringify(payload),
   }).then((response) => {
@@ -74,9 +74,9 @@ async function sendEvent(name, type, data) {
 /**
  * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
  * @param {Object} queryParams  (e.g. { name: "foo", type: "bar" })
- * @returns {Promise<any[]>}
+ * @returns {Promise<any>}
  */
-async function getEvents(queryParams) {
+async function getEvents({ name }) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
@@ -84,14 +84,14 @@ async function getEvents(queryParams) {
   }
 
   const cookieVal = getCookie(COOKIE_NAME) || "";
-  const queryString = new URLSearchParams(queryParams).toString();
-  const url = `${BASE_URL}/events?${queryString}`;
+
+  const url = `${BASE_URL}/events/${cookieVal}/${name}`;
 
   return fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      "X-LP-Cookie": cookieVal, // send the cookie value here
+      // "X-LP-Cookie": cookieVal, // send the cookie value here
     },
   }).then((response) => {
     if (!response.ok) {
