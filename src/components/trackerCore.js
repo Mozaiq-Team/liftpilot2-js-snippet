@@ -7,6 +7,7 @@ import { getCookie, setCookie } from "./cookie.js";
 import { generateId } from "./idGenerator.js";
 import { setupRouteTracking } from "./routeTracker.js";
 import { setupFormTracking } from "./formTracker.js";
+import { setupInputTracking } from "./inputTracker.js";
 
 let BASE_URL = "";
 const COOKIE_NAME = "LP_COOKIE";
@@ -34,6 +35,8 @@ function init(options) {
   setupRouteTracking();
   // Setup form tracking
   setupFormTracking();
+  // Setup input tracking
+  setupInputTracking();
 }
 
 /**
