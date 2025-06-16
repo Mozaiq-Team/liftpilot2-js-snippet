@@ -25,14 +25,14 @@
       const button = document.getElementById("trackButton");
       button.addEventListener("click", function () {
         console.log("Lift Pilot tracking started.");
-        LPTracker.sendEvent("HERO_CTA4", "click", {
+        LPTracker.sendEvent("HERO_CTA4", {
           buttonId: "trackButton",
           timestamp: new Date().toISOString(),
         });
       });
 
       console.log("Page loaded successfully.");
-      const eventFromDb = await LPTracker.getEvents({name: "HERO_CTA4"});
+      const eventFromDb = await LPTracker.getEvents({ name: "HERO_CTA4" });
 
       if (eventFromDb.length > 0) {
         button.innerText = "Track Lift Pilot (Events Found)";

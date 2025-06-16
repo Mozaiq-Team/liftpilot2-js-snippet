@@ -19,7 +19,7 @@ const COOKIE_NAME = "LP_COOKIE";
 function init(options) {
   if (!options || typeof options.url !== "string") {
     throw new Error(
-      "Liftpilot Event Tracking init requires an options object with a url property",
+      "Liftpilot Event Tracking init requires an options object with a url property"
     );
   }
   BASE_URL = options.url.replace(/\/$/, ""); // remove trailing slash
@@ -49,7 +49,7 @@ function init(options) {
 async function sendEvent(name, data) {
   if (!BASE_URL) {
     throw new Error(
-      "Liftpilot Event Tracking is not initialized. Call init() first.",
+      "Liftpilot Event Tracking is not initialized. Call init() first."
     );
   }
   if (!name || typeof name !== "string") {
@@ -82,7 +82,7 @@ async function sendEvent(name, data) {
 async function getEvents({ name }) {
   if (!BASE_URL) {
     throw new Error(
-      "Liftpilot Event Tracking is not initialized. Call init() first.",
+      "Liftpilot Event Tracking is not initialized. Call init() first."
     );
   }
 
