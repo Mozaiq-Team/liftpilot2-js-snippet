@@ -57,13 +57,13 @@ async function sendEvent(name, data) {
   }
 
   const cookieVal = getCookie(COOKIE_NAME) || "";
-  const payload = { cid: cookieVal, name, value: data };
+  const payload = { name, value: data };
 
   return fetch(`${BASE_URL}/events`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      // "X-LP-Cookie": cookieVal, // send the cookie value here
+      "x-cid": cookieVal, // send the cookie value here
     },
     body: JSON.stringify(payload),
   }).then((response) => {
@@ -88,13 +88,13 @@ async function getEvents({ name }) {
 
   const cookieVal = getCookie(COOKIE_NAME) || "";
 
-  const url = `${BASE_URL}/events/${cookieVal}/${name}`;
+  const url = `${BASE_URL}/events/${name}`;
 
   return fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      // "X-LP-Cookie": cookieVal, // send the cookie value here
+      "x-cid": cookieVal, // send the cookie value here
     },
   }).then((response) => {
     if (!response.ok) {
