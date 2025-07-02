@@ -16,8 +16,8 @@ function getCookie(name) {
 
   const matches = document.cookie.match(
     new RegExp(
-      "(?:^|; )" + name.replace(/([.$?*|{}()[]\\\/+^])/g, "\\$1") + "=([^;]*)"
-    )
+      "(?:^|; )" + name.replace(/([.$?*|{}()[]\\\/+^])/g, "\\$1") + "=([^;]*)",
+    ),
   );
   return matches ? decodeURIComponent(matches[1]) : null;
 }
@@ -38,12 +38,14 @@ function setCookie(name, value, options = {}) {
   if (typeof name !== "string" || typeof value !== "string") {
     throw new Error("Cookie name and value must be strings");
   }
+  // Auto-detect if we should use secure based on protocol
+  const isHttps = window.location.protocol === "https:";
 
   const {
     days = 365,
     path = "/",
     domain,
-    secure = true,
+    secure = isHttps,
     sameSite = "Lax",
   } = options;
 
