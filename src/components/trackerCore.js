@@ -76,10 +76,72 @@ async function sendEvent(name, data) {
 
 /**
  * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
+ * @param {Object} queryParams  (e.g. { name: "foo", limit: 10, offset: 0 })
+ * @param {Object} filter  (e.g. { uri: "/pricing", source: "google" })
+ * @returns {Promise<any>}
+ */
+async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
+  if (!BASE_URL) {
+    throw new Error(
+      "Liftpilot Event Tracking is not initialized. Call init() first.",
+    );
+  }
+
+  if (!name) {
+    throw new Error("Event name is required");
+  }
+
+  const cookieVal = getCookie(COOKIE_NAME) || "";
+  if (!cookieVal) {
+    throw new Error(
+      "No contact ID found. User tracking may not be initialized.",
+    );
+  }
+
+  // Build query parameters
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString(),
+  });
+
+  // Only add filter if it has properties
+  if (Object.keys(filter).length > 0) {
+    params.append("filter", JSON.stringify(filter));
+  }
+
+  const url = `${BASE_URL}/events/${encodeURIComponent(name)}?${params}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cid": cookieVal,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `Failed to query events: ${response.status} ${response.statusText}${
+          errorData.message ? ` - ${errorData.message}` : ""
+        }`,
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error querying events:", error);
+    throw error;
+  }
+}
+
+/**
+ * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
  * @param {Object} queryParams  (e.g. { name: "foo", type: "bar" })
  * @returns {Promise<any>}
  */
-async function getEvents({ name }) {
+async function getEvent({ name }) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
@@ -104,4 +166,4 @@ async function getEvents({ name }) {
   });
 }
 
-export { init, sendEvent, getEvents };
+export { init, sendEvent, getEvents, getEvent };

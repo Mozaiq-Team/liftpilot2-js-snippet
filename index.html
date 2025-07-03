@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Web Page</title>
+    <p>You visited this page <span id="count">0</span> times.</p>
     <script type="module" src="/src/index.js"></script>
   </head>
   <body>
@@ -34,6 +35,13 @@
 
       console.log("Page loaded successfully.");
       const eventFromDb = await LPTracker.getEvents({ name: "HERO_CTA4" });
+      const pageVisits = await LPTracker.getEvents(
+        { name: "page_visit" },
+        { uri: window.location.pathname },
+      );
+
+      const pageVisitCount = pageVisits.length || 0;
+      document.getElementById("count").innerText = pageVisitCount;
 
       if (eventFromDb.length > 0) {
         button.innerText = "Track Lift Pilot (Events Found)";
