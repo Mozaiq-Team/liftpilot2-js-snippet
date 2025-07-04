@@ -151,7 +151,7 @@ async function getEvent({ name }) {
 
   const cookieVal = getCookie(COOKIE_NAME) || "";
 
-  const url = `${BASE_URL}/events/${name}`;
+  const url = `${BASE_URL}/event/${name}`;
 
   return fetch(url, {
     method: "GET",

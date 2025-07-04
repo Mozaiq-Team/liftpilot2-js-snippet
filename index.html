@@ -34,7 +34,7 @@
       });
 
       console.log("Page loaded successfully.");
-      const eventFromDb = await LPTracker.getEvents({ name: "HERO_CTA4" });
+      const eventFromDb = await LPTracker.getEvent({ name: "HERO_CTA4" });
       const pageVisits = await LPTracker.getEvents(
         { name: "page_visit" },
         { uri: window.location.pathname },
@@ -43,7 +43,7 @@
       const pageVisitCount = pageVisits.length || 0;
       document.getElementById("count").innerText = pageVisitCount;
 
-      if (eventFromDb.length > 0) {
+      if (!!eventFromDb._id) {
         button.innerText = "Track Lift Pilot (Events Found)";
       }
 
