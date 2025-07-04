@@ -100,6 +100,7 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
 
   // Build query parameters
   const params = new URLSearchParams({
+    name,
     limit: limit.toString(),
     offset: offset.toString(),
   });
@@ -109,7 +110,7 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
     params.append("filter", JSON.stringify(filter));
   }
 
-  const url = `${BASE_URL}/events/${encodeURIComponent(name)}?${params}`;
+  const url = `${BASE_URL}/events?${params}`;
 
   try {
     const response = await fetch(url, {
