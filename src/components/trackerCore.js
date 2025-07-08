@@ -187,31 +187,44 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
 /**
  * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
  * @param {Object} queryParams  (e.g. { name: "foo", type: "bar" })
+ * @param {function} callback
  * @returns {Promise<any>}
  */
-async function getEvent({ name }) {
+async function getEvent({ name }, callback) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
     );
   }
 
-  const userId = await getUserId();
+  try {
+    const userId = await getUserId();
+    const url = `${BASE_URL}/event/${name}`;
 
-  const url = `${BASE_URL}/event/${name}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cid": userId,
+      },
+    });
 
-  return fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-cid": userId, // send the user ID here
-    },
-  }).then((response) => {
     if (!response.ok) {
       throw new Error(`Failed to query events: ${response.statusText}`);
     }
-    return response.json();
-  });
+
+    const responseJson = await response.json();
+
+    // Execute callback with resolved data
+    if (callback) {
+      callback(responseJson);
+    }
+
+    return responseJson;
+  } catch (error) {
+    console.error("Error in getEvent:", error);
+    throw error; // Re-throw to allow caller to handle
+  }
 }
 
 export { init, sendEvent, getEvents, getEvent };
