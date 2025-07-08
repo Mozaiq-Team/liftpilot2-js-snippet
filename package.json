@@ -28,6 +28,7 @@
     "whatwg-fetch": "^3.6.20"
   },
   "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^4.6.2",
     "ulid": "^2.4.0"
   }
 }

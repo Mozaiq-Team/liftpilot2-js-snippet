@@ -30,7 +30,6 @@ let _inputTrackingInitialized = false;
 let _eventListener = null;
 
 function setupInputTracking() {
-  console.log("Setting up input tracking");
   if (_inputTrackingInitialized) return;
   _inputTrackingInitialized = true;
 
@@ -40,14 +39,12 @@ function setupInputTracking() {
 
     // Skip empty values
     if (el.value.trim() === "") {
-      console.warn("⚠️ Input value is empty, skipping tracking");
       return;
     }
 
     // Validate input based on type
     const validator = validators[el.type];
     if (validator && !validator(el.value)) {
-      console.warn(`⚠️ Invalid ${el.type} format:`, el.value);
       return;
     }
 

@@ -18,7 +18,6 @@ function _trackRouteChange() {
       },
     };
 
-    console.log("page visit detected:", trackingData);
     sendEvent("page_visit", trackingData).catch((err) => {
       console.error("Page visit tracking failed:", err);
     });
@@ -61,11 +60,9 @@ export function setupRouteTracking() {
     // Track initial page load
     if (document.readyState === "loading") {
       window.addEventListener("DOMContentLoaded", () => {
-        console.log("DOM fully loaded and parsed");
         _trackRouteChange();
       });
     } else {
-      console.log("Document already loaded, tracking initial route now");
       _trackRouteChange();
     }
 

@@ -8,21 +8,41 @@ import { generateId } from "./idGenerator.js";
 import { setupRouteTracking } from "./routeTracker.js";
 import { setupFormTracking } from "./formTracker.js";
 import { setupInputTracking } from "./inputTracker.js";
+import {
+  initFingerprint,
+  getVisitorId,
+  isAvailable,
+} from "./fingerprintManager.js";
 
 let BASE_URL = "";
 const COOKIE_NAME = "LP_COOKIE";
+let fingerprintEnabled = false;
 
 /**
  * Initialize with a base URL and ensure LP_COOKIE exists.
- * @param {{url: string}} options
+ * @param {{url: string, fingerprintFallback?: boolean, debug?: boolean}} options
  */
-function init(options) {
+async function init(options) {
   if (!options || typeof options.url !== "string") {
     throw new Error(
       "Liftpilot Event Tracking init requires an options object with a url property",
     );
   }
   BASE_URL = options.url.replace(/\/$/, ""); // remove trailing slash
+  fingerprintEnabled = options.fingerprintFallback !== false; // default to true
+
+  // Initialize fingerprinting if enabled
+  if (fingerprintEnabled) {
+    try {
+      await initFingerprint({ debug: options.debug || false });
+    } catch (error) {
+      console.warn(
+        "Fingerprinting initialization failed, falling back to cookie-only tracking:",
+        error,
+      );
+      fingerprintEnabled = false;
+    }
+  }
 
   // If LP_COOKIE doesn’t exist yet, generate and set it.
   let cookieVal = getCookie(COOKIE_NAME);
@@ -37,6 +57,33 @@ function init(options) {
   setupFormTracking();
   // Setup input tracking
   setupInputTracking();
+}
+
+/**
+ * Get user identification using hybrid approach (cookie + fingerprint fallback)
+ * @returns {Promise<string>} User ID
+ */
+async function getUserId() {
+  // Try cookie first
+  const cookieVal = getCookie(COOKIE_NAME);
+  if (cookieVal) {
+    return cookieVal;
+  }
+
+  // If no cookie and fingerprinting is enabled, use fingerprint
+  if (fingerprintEnabled && isAvailable()) {
+    try {
+      const fingerprintId = await getVisitorId();
+      if (fingerprintId) {
+        return `fp_${fingerprintId}`;
+      }
+    } catch (error) {
+      console.warn("Failed to get fingerprint ID:", error);
+    }
+  }
+
+  // Last resort: generate new ID (but it won't persist without cookies)
+  return generateId();
 }
 
 /**
@@ -56,14 +103,14 @@ async function sendEvent(name, data) {
     return Promise.reject(new Error("Event name must be a non-empty string"));
   }
 
-  const cookieVal = getCookie(COOKIE_NAME) || "";
+  const userId = await getUserId();
   const payload = { name, value: data };
 
   return fetch(`${BASE_URL}/events`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-cid": cookieVal, // send the cookie value here
+      "x-cid": userId, // send the user ID here
     },
     body: JSON.stringify(payload),
   }).then((response) => {
@@ -91,8 +138,8 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
     throw new Error("Event name is required");
   }
 
-  const cookieVal = getCookie(COOKIE_NAME) || "";
-  if (!cookieVal) {
+  const userId = await getUserId();
+  if (!userId) {
     throw new Error(
       "No contact ID found. User tracking may not be initialized.",
     );
@@ -117,7 +164,7 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-cid": cookieVal,
+        "x-cid": userId,
       },
     });
 
@@ -149,7 +196,7 @@ async function getEvent({ name }) {
     );
   }
 
-  const cookieVal = getCookie(COOKIE_NAME) || "";
+  const userId = await getUserId();
 
   const url = `${BASE_URL}/event/${name}`;
 
@@ -157,7 +204,7 @@ async function getEvent({ name }) {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      "x-cid": cookieVal, // send the cookie value here
+      "x-cid": userId, // send the user ID here
     },
   }).then((response) => {
     if (!response.ok) {

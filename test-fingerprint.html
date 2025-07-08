@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fingerprint Fallback Test</title>
+  </head>
+  <body>
+    <h1>LiftPilot Fingerprint Test</h1>
+    <div id="output"></div>
+    <button id="testBtn">1. Initialize & Test Cookie</button>
+    <button id="clearCookies">2. Clear Cookies</button>
+    <button id="testFallback">3. Test Fingerprint Fallback</button>
+
+    <script type="module" src="/src/index.js"></script>
+    <script>
+      const output = document.getElementById("output");
+
+      function log(message) {
+        output.innerHTML += `<p>${message}</p>`;
+        console.log(message);
+      }
+
+      // Test 1: Normal initialization with cookies enabled
+      document.getElementById("testBtn").onclick = async () => {
+        try {
+          log("=== Test 1: Normal initialization ===");
+          await window.LPTracker.init({
+            url: "http://127.0.0.1:3001/api/v1/",
+            fingerprintFallback: true,
+            debug: true,
+          });
+          log("✓ Initialization successful");
+
+          // Test sending an event
+          await window.LPTracker.sendEvent("test_event", { test: "data" });
+          log("✓ Event sent successfully (check network tab for x-cid header)");
+        } catch (error) {
+          log(`✗ Error: ${error.message}`);
+        }
+      };
+
+      // Test 2: Clear cookies AFTER init
+      document.getElementById("clearCookies").onclick = () => {
+        log("=== Test 2: Clearing cookies after init ===");
+        // Clear all cookies
+        document.cookie.split(";").forEach((cookie) => {
+          const eqPos = cookie.indexOf("=");
+          const name =
+            eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+          document.cookie =
+            name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        });
+        log("✓ Cookies cleared - now send an event to test fingerprint fallback");
+      };
+
+      // Test 3: Test fingerprint fallback AFTER cookies are cleared
+      document.getElementById("testFallback").onclick = async () => {
+        try {
+          log("=== Test 3: Testing fingerprint fallback ===");
+          log("Sending event after cookies were cleared...");
+
+          // Test sending an event with fingerprint fallback
+          await window.LPTracker.sendEvent("fingerprint_test", {
+            fallback: "test",
+          });
+          log("✓ Event sent! Check network tab - x-cid should have fp_ prefix");
+        } catch (error) {
+          log(`✗ Fallback error: ${error.message}`);
+        }
+      };
+
+      log("Ready to test. Click buttons to test different scenarios.");
+    </script>
+  </body>
+</html>
+

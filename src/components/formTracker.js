@@ -88,7 +88,6 @@ function setupFormTracking() {
 
           // Only send if at least one of name or email is present
           if (nameValue || emailValue || companyName) {
-            console.log("Form submission captured");
             const formData = validateFormData({
               formId: form.id,
               fields: {
@@ -101,10 +100,6 @@ function setupFormTracking() {
             sendEvent("form_submit", formData).catch((err) => {
               console.error("Form-submit tracking failed:", err);
             });
-          } else {
-            console.warn(
-              "Form submit tracking skipped: no name or email found"
-            );
           }
         } catch (error) {
           console.error("Error processing form submission:", error);
