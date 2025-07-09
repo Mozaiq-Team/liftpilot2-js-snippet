@@ -7,21 +7,10 @@
     <p>You visited this page <span id="count">0</span> times.</p>
     <script src="/dist/lptracker.js"></script>
     <script>
-      const hideStyles = document.createElement("style");
-      hideStyles.id = "lp-hide-styles";
-      hideStyles.innerText = `body {visibility: hidden !important;}`;
-      (document.head || document.documentElement).appendChild(hideStyles);
-
+      // // LPTracker.init({ url: "https://api-v2.dev-liftpilot.com/api/v1/" });
       LPTracker.init({ url: "http://127.0.0.1:3001/api/v1/" });
 
-      window.addEventListener("DOMContentLoaded", () => {
-        LPTracker.getEvent({ name: "HERO_CTA4" }, (data) => {
-          console.log("Event from DB:", data);
-          const button = document.getElementById("trackButton");
-          button.innerText = "Track Lift Pilot (Events Found)";
-          hideStyles.remove();
-        });
-      });
+      LPTracker.getPersonalizationData();
     </script>
   </head>
   <body>
@@ -34,37 +23,8 @@
     </nav>
     <h1>Welcome to My Web Page</h1>
     <p>LIFTPILOT v2.0</p>
-    <button id="trackButton">Track Lift Pilot</button>
-
-    <script type="module">
-      // import LPTracker from "./src/index.js";
-      // // LPTracker.init({ url: "https://api-v2.dev-liftpilot.com/api/v1/" });
-      // LPTracker.init({ url: "http://127.0.0.1:3001/api/v1/" });
-      //
-      // const button = document.getElementById("trackButton");
-      // button.addEventListener("click", function () {
-      //   console.log("Lift Pilot tracking started.");
-      //   LPTracker.sendEvent("HERO_CTA4", {
-      //     buttonId: "trackButton",
-      //     timestamp: new Date().toISOString(),
-      //   });
-      // });
-      //
-      // console.log("Page loaded successfully.");
-      // const eventFromDb = await LPTracker.getEvent({ name: "HERO_CTA4" });
-      // const pageVisits = await LPTracker.getEvents(
-      //   { name: "page_visit" },
-      //   { uri: window.location.pathname },
-      // );
-      //
-      // const pageVisitCount = pageVisits.length || 0;
-      // document.getElementById("count").innerText = pageVisitCount;
-      //
-      // if (!!eventFromDb._id) {
-      //   button.innerText = "Track Lift Pilot (Events Found)";
-      // }
-      //
-      // console.log("Events from database:", eventFromDb);
-    </script>
+    <button data-lp-variable-copy="home-cta-copy" id="trackButton">
+      Track Lift Pilot
+    </button>
   </body>
 </html>

@@ -7,9 +7,16 @@ import {
   sendEvent,
   getEvents,
   getEvent,
+  getPersonalizationData,
 } from "./components/trackerCore.js";
 
 // Expose these three methods on window.LPTracker
-const LPTracker = { init, sendEvent, getEvents, getEvent };
+const LPTracker = {
+  init,
+  sendEvent,
+  getEvents,
+  getEvent,
+  getPersonalizationData,
+};
 window.LPTracker = LPTracker;
 export default LPTracker;
