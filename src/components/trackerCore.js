@@ -294,10 +294,6 @@ function _applyPersonalization(personalizationObject) {
     elements.forEach((el) => {
       const key = el.getAttribute(attr);
       if (key && personalizationObject[key]) {
-        console.log(
-          `Replacing ${attr}="${key}" with value:`,
-          personalizationObject[key],
-        );
         if (attr === PERSONALIZATION_ATTRIBUTE_COPY) {
           el.textContent = personalizationObject[key];
         } else if (attr === PERSONALIZATION_ATTRIBUTE_SRC) {
@@ -311,6 +307,15 @@ function _applyPersonalization(personalizationObject) {
         }
       }
       el.setAttribute(PERSONALIZATION_FLAG, "true"); // Mark as personalized
+    });
+  });
+}
+
+function _clearPersonalizationFlags() {
+  ALL_PERSONALIZATION_ATTRIBUTES.forEach((attr) => {
+    const elements = document.querySelectorAll(`[${attr}]`);
+    elements.forEach((el) => {
+      el.setAttribute(PERSONALIZATION_FLAG, "true");
     });
   });
 }
@@ -385,6 +390,7 @@ async function getPersonalizationData(callback) {
     }
   } catch (error) {
     console.error("Error in getPersonalizationData:", error);
+    _clearPersonalizationFlags();
     throw error; // Re-throw to allow caller to handle
   }
 }
