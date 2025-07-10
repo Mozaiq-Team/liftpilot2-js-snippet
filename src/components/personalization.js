@@ -24,11 +24,11 @@ function _applyPersonalization(personalizationObject) {
       const key = el.getAttribute(attr);
       if (key && personalizationObject[key]) {
         if (attr === PERSONALIZATION_ATTRIBUTE_COPY) {
-          el.textContent = personalizationObject[key].value;
+          el.textContent = personalizationObject[key];
         } else if (attr === PERSONALIZATION_ATTRIBUTE_SRC) {
-          el.src = personalizationObject[key].value;
+          el.src = personalizationObject[key];
         } else if (attr === PERSONALIZATION_ATTRIBUTE_HREF) {
-          el.href = personalizationObject[key].value;
+          el.href = personalizationObject[key];
         } else if (attr === PERSONALIZATION_ATTRIBUTE) {
           const valueObj = personalizationObject[key];
           Object.entries(valueObj).forEach(([prop, value]) => {
