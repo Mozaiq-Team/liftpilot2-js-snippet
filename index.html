@@ -10,7 +10,7 @@
       // // LPTracker.init({ url: "https://api-v2.dev-liftpilot.com/api/v1/" });
       LPTracker.init({ url: "http://127.0.0.1:3001/api/v1/" });
 
-      LPTracker.getPersonalizationData();
+      LPTracker.personalize();
     </script>
   </head>
   <body>
@@ -30,5 +30,6 @@
     >
       Track Lift Pilot
     </button>
+    <p data-lp-var-copy="home-main-text">This is important for you</p>
   </body>
 </html>

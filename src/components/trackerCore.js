@@ -13,44 +13,15 @@ import {
   getVisitorId,
   isAvailable,
 } from "./fingerprintManager.js";
+import { CID_COOKIE_NAME, AID_COOKIE_NAME } from "../constants.js";
+import {
+  _applyPersonalization,
+  _clearPersonalizationFlags,
+} from "./personalization.js";
 
 let BASE_URL = "";
-const COOKIE_NAME = "LP_COOKIE";
-const AID_COOKIE_NAME = "LP_AID_COOKIE";
-
-const PERSONALIZATION_ATTRIBUTE = "data-lp-var";
-const PERSONALIZATION_ATTRIBUTE_COPY = "data-lp-var-copy";
-const PERSONALIZATION_ATTRIBUTE_SRC = "data-lp-var-src";
-const PERSONALIZATION_ATTRIBUTE_HREF = "data-lp-var-href";
-const CUSTOM_PERSONALIZATION_ATTRIBUTES = [
-  PERSONALIZATION_ATTRIBUTE_COPY,
-  PERSONALIZATION_ATTRIBUTE_SRC,
-  PERSONALIZATION_ATTRIBUTE_HREF,
-];
-const ALL_PERSONALIZATION_ATTRIBUTES = [
-  PERSONALIZATION_ATTRIBUTE,
-  ...CUSTOM_PERSONALIZATION_ATTRIBUTES,
-];
-const PERSONALIZATION_FLAG = "data-lp-var-ready";
 
 let fingerprintEnabled = false;
-
-/**
- * Set up a style element to hide elements until personalization is applied.
- */
-const style = document.createElement("style");
-//generate styles base on attributes array
-const styles = ALL_PERSONALIZATION_ATTRIBUTES.map(
-  (attr) => `[${attr}]:not([${PERSONALIZATION_FLAG}="true"]) {
-          opacity: 0 !important; /* Hide elements until personalization is applied */bin.usr-is-merged/
-        }`,
-).join(",\n");
-style.textContent = styles;
-// Append the style to the head
-document.head.appendChild(style);
-/**
- *
- */
 
 /**
  * Initialize with a base URL and ensure LP_COOKIE exists.
@@ -79,10 +50,10 @@ async function init(options) {
   }
 
   // If LP_COOKIE doesn't exist yet, generate and set it.
-  let cookieVal = getCookie(COOKIE_NAME);
+  let cookieVal = getCookie(CID_COOKIE_NAME);
   if (!cookieVal) {
     cookieVal = generateId();
-    setCookie(COOKIE_NAME, cookieVal);
+    setCookie(CID_COOKIE_NAME, cookieVal);
   }
 
   // Setup route tracking
@@ -99,7 +70,7 @@ async function init(options) {
  */
 async function getUserId() {
   // Try cookie first
-  const cookieVal = getCookie(COOKIE_NAME);
+  const cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
     return cookieVal;
   }
@@ -150,16 +121,30 @@ async function sendEvent(name, data) {
     headers["x-aid"] = aid;
   }
 
-  return fetch(`${BASE_URL}/events`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
-  }).then((response) => {
-    if (!response.ok) {
+  try {
+    const res = await fetch(`${BASE_URL}/events`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const responseJson = await res.json();
+    const { ok, cid: responseCid, aid: responseAid } = responseJson || {};
+    if (ok === false) {
       throw new Error(`Failed to send event: ${response.statusText}`);
     }
-    return response.json();
-  });
+
+    if (responseCid && responseCid !== userId) {
+      // If the response cid is different, update the cookie
+      setCookie(CID_COOKIE_NAME, responseCid);
+    }
+    if (responseAid && responseAid !== aid) {
+      // If the response aid is different, update the cookie
+      setCookie(AID_COOKIE_NAME, responseAid);
+    }
+  } catch (error) {
+    console.error("Error sending event:", error);
+    throw error; // Re-throw to allow caller to handle
+  }
 }
 
 /**
@@ -236,7 +221,7 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
 /**
  * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
  * @param {Object} queryParams  (e.g. { name: "foo", type: "bar" })
- * @param {function<resultData>} callback
+ * @param {function<any>} callback
  * @returns {Promise<any>}
  */
 async function getEvent({ name }, callback) {
@@ -284,65 +269,8 @@ async function getEvent({ name }, callback) {
 }
 
 /**
- * Apply personalization attributes to the DOM elements
- * @param {Object} attributes - The personalization attributes to apply();
- * @param {Object} personalizationObject - The personalization data object - containing key-value pairs for personalization
- * @returns {void}
- * @private
- * @description
- * This function iterates over all personalization attributes defined init
- * ALL_PERSONALIZATION_ATTRIBUTES and applies the corresponding values
- */
-function _applyPersonalization(personalizationObject) {
-  ALL_PERSONALIZATION_ATTRIBUTES.forEach((attr) => {
-    const elements = document.querySelectorAll(`[${attr}]`);
-    elements.forEach((el) => {
-      const key = el.getAttribute(attr);
-      if (key && personalizationObject[key]) {
-        if (attr === PERSONALIZATION_ATTRIBUTE_COPY) {
-          el.textContent = personalizationObject[key].value;
-        } else if (attr === PERSONALIZATION_ATTRIBUTE_SRC) {
-          el.src = personalizationObject[key].value;
-        } else if (attr === PERSONALIZATION_ATTRIBUTE_HREF) {
-          el.href = personalizationObject[key].value;
-        } else if (attr === PERSONALIZATION_ATTRIBUTE) {
-          const valueObj = personalizationObject[key];
-          Object.entries(valueObj).forEach(([prop, value]) => {
-            if (prop === "copy") {
-              el.textContent = value;
-            } else if (prop === "src") {
-              el.setAttribute("src", value);
-            } else if (prop === "href") {
-              el.setAttribute("href", value);
-            } else {
-              // NOTE: think about how to handle other properties
-              // For any other properties, set them as attributes
-              // el.setAttribute(prop, value);
-            }
-          });
-        } else {
-          console.warn(
-            `Unknown personalization attribute: ${attr}. Skipping replacement.`,
-          );
-        }
-      }
-      el.setAttribute(PERSONALIZATION_FLAG, "true"); // Mark as personalized
-    });
-  });
-}
-
-function _clearPersonalizationFlags() {
-  ALL_PERSONALIZATION_ATTRIBUTES.forEach((attr) => {
-    const elements = document.querySelectorAll(`[${attr}]`);
-    elements.forEach((el) => {
-      el.setAttribute(PERSONALIZATION_FLAG, "true");
-    });
-  });
-}
-
-/**
  * Fetch personalization data for a cid/aid
- * @param {function<resultData>} callback
+ * @param {function<any>} callback
  * @returns {<{
  *   cid: string,
  *   aid?: string,
@@ -350,7 +278,7 @@ function _clearPersonalizationFlags() {
  *   personalization: Object,
  * }>}
  */
-async function getPersonalizationData(callback) {
+async function personalize(callback) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
@@ -382,7 +310,6 @@ async function getPersonalizationData(callback) {
 
     const responseJson = await response.json();
 
-    console.log("Personalization data:", responseJson);
     const { data } = responseJson;
     const { aid: responseAid, cid: responseCid, personalization } = data || {};
     if (responseAid) {
@@ -391,7 +318,7 @@ async function getPersonalizationData(callback) {
     }
     if (responseCid) {
       // If cid is present, set it as a cookie
-      setCookie(COOKIE_NAME, responseCid);
+      setCookie(CID_COOKIE_NAME, responseCid);
     }
 
     // Execute callback with resolved data
@@ -402,7 +329,6 @@ async function getPersonalizationData(callback) {
 
     // If no callback, replace the dom elements with personalization data
     if (personalization) {
-      console.log("Applying personalization data:", personalization);
       if (document.readyState === "loading") {
         // If document is still loading, wait for DOMContentLoaded
         document.addEventListener("DOMContentLoaded", () => {
@@ -420,4 +346,4 @@ async function getPersonalizationData(callback) {
   }
 }
 
-export { init, sendEvent, getEvents, getEvent, getPersonalizationData };
+export { init, sendEvent, getEvents, getEvent, personalize };

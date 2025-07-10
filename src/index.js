@@ -7,8 +7,11 @@ import {
   sendEvent,
   getEvents,
   getEvent,
-  getPersonalizationData,
+  personalize,
 } from "./components/trackerCore.js";
+import { setStyles } from "./components/setStyles.js";
+
+setStyles();
 
 // Expose these three methods on window.LPTracker
 const LPTracker = {
@@ -16,7 +19,7 @@ const LPTracker = {
   sendEvent,
   getEvents,
   getEvent,
-  getPersonalizationData,
+  personalize,
 };
 window.LPTracker = LPTracker;
 export default LPTracker;
