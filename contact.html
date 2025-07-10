@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Web Page</title>
-    <script type="module" src="/src/index.js"></script>
+    <script src="/dist/lptracker.js"></script>
   </head>
   <body>
     <nav>
@@ -41,12 +41,13 @@
       <button type="submit">Submit</button>
     </form>
 
-    <script type="module">
-      import LPTracker from "./src/index.js";
-      LPTracker.init({ url: "https://api-v2.dev-liftpilot.com/api/v1/" });
+    <script>
+      // LPTracker.init({ url: "https://api-v2.dev-liftpilot.com/api/v1/" });
+      LPTracker.init({ url: "http://127.0.0.1:3001/api/v1/" });
 
       const form = document.getElementById("contactForm");
       form.addEventListener("submit", function (event) {
+        console.log("Form submission event triggered", event);
         event.preventDefault(); // Prevent the default form submission
 
         const name = document.getElementById("name").value;

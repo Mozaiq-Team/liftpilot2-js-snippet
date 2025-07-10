@@ -18,15 +18,20 @@ let BASE_URL = "";
 const COOKIE_NAME = "LP_COOKIE";
 const AID_COOKIE_NAME = "LP_AID_COOKIE";
 
-const PERSONALIZATION_ATTRIBUTE_COPY = "data-lp-variable-copy";
-const PERSONALIZATION_ATTRIBUTE_SRC = "data-lp-variable-src";
-const PERSONALIZATION_ATTRIBUTE_HREF = "data-lp-variable-href";
-const ALL_PERSONALIZATION_ATTRIBUTES = [
+const PERSONALIZATION_ATTRIBUTE = "data-lp-var";
+const PERSONALIZATION_ATTRIBUTE_COPY = "data-lp-var-copy";
+const PERSONALIZATION_ATTRIBUTE_SRC = "data-lp-var-src";
+const PERSONALIZATION_ATTRIBUTE_HREF = "data-lp-var-href";
+const CUSTOM_PERSONALIZATION_ATTRIBUTES = [
   PERSONALIZATION_ATTRIBUTE_COPY,
   PERSONALIZATION_ATTRIBUTE_SRC,
   PERSONALIZATION_ATTRIBUTE_HREF,
 ];
-const PERSONALIZATION_FLAG = "data-lp-variable-ready";
+const ALL_PERSONALIZATION_ATTRIBUTES = [
+  PERSONALIZATION_ATTRIBUTE,
+  ...CUSTOM_PERSONALIZATION_ATTRIBUTES,
+];
+const PERSONALIZATION_FLAG = "data-lp-var-ready";
 
 let fingerprintEnabled = false;
 
@@ -295,11 +300,26 @@ function _applyPersonalization(personalizationObject) {
       const key = el.getAttribute(attr);
       if (key && personalizationObject[key]) {
         if (attr === PERSONALIZATION_ATTRIBUTE_COPY) {
-          el.textContent = personalizationObject[key];
+          el.textContent = personalizationObject[key].value;
         } else if (attr === PERSONALIZATION_ATTRIBUTE_SRC) {
-          el.src = personalizationObject[key];
+          el.src = personalizationObject[key].value;
         } else if (attr === PERSONALIZATION_ATTRIBUTE_HREF) {
-          el.href = personalizationObject[key];
+          el.href = personalizationObject[key].value;
+        } else if (attr === PERSONALIZATION_ATTRIBUTE) {
+          const valueObj = personalizationObject[key];
+          Object.entries(valueObj).forEach(([prop, value]) => {
+            if (prop === "copy") {
+              el.textContent = value;
+            } else if (prop === "src") {
+              el.setAttribute("src", value);
+            } else if (prop === "href") {
+              el.setAttribute("href", value);
+            } else {
+              // NOTE: think about how to handle other properties
+              // For any other properties, set them as attributes
+              // el.setAttribute(prop, value);
+            }
+          });
         } else {
           console.warn(
             `Unknown personalization attribute: ${attr}. Skipping replacement.`,
@@ -364,10 +384,14 @@ async function getPersonalizationData(callback) {
 
     console.log("Personalization data:", responseJson);
     const { data } = responseJson;
-    const { aid: responseAid, personalization } = data || {};
+    const { aid: responseAid, cid: responseCid, personalization } = data || {};
     if (responseAid) {
       // If aid is present, set it as a cookie
       setCookie(AID_COOKIE_NAME, responseAid);
+    }
+    if (responseCid) {
+      // If cid is present, set it as a cookie
+      setCookie(COOKIE_NAME, responseCid);
     }
 
     // Execute callback with resolved data
@@ -378,6 +402,7 @@ async function getPersonalizationData(callback) {
 
     // If no callback, replace the dom elements with personalization data
     if (personalization) {
+      console.log("Applying personalization data:", personalization);
       if (document.readyState === "loading") {
         // If document is still loading, wait for DOMContentLoaded
         document.addEventListener("DOMContentLoaded", () => {
