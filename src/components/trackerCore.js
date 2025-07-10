@@ -24,6 +24,20 @@ let BASE_URL = "";
 let fingerprintEnabled = false;
 
 /**
+ * Set up a style element to hide elements until personalization is applied.
+ */
+const style = document.createElement("style");
+//generate styles base on attributes array
+const styles = ALL_PERSONALIZATION_ATTRIBUTES.map(
+  (attr) => `[${attr}]:not([${PERSONALIZATION_FLAG}="true"]) {
+          opacity: 0 !important; /* Hide elements until personalization is applied */bin.usr-is-merged/
+        }`,
+).join(",\n");
+style.textContent = styles;
+// Append the style to the head
+document.head.appendChild(style);
+
+/**
  * Initialize with a base URL and ensure LP_COOKIE exists.
  * @param {{url: string, fingerprintFallback?: boolean, debug?: boolean}} options
  */

@@ -9,9 +9,9 @@ import {
   getEvent,
   personalize,
 } from "./components/trackerCore.js";
-import { setStyles } from "./components/setStyles.js";
-
-setStyles();
+// import { setStyles } from "./components/setStyles.js";
+//
+// setStyles();
 
 // Expose these three methods on window.LPTracker
 const LPTracker = {
