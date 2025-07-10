@@ -13,7 +13,12 @@ import {
   getVisitorId,
   isAvailable,
 } from "./fingerprintManager.js";
-import { CID_COOKIE_NAME, AID_COOKIE_NAME } from "../constants.js";
+import {
+  CID_COOKIE_NAME,
+  AID_COOKIE_NAME,
+  ALL_PERSONALIZATION_ATTRIBUTES,
+  PERSONALIZATION_FLAG,
+} from "../constants.js";
 import {
   _applyPersonalization,
   _clearPersonalizationFlags,
@@ -30,9 +35,9 @@ const style = document.createElement("style");
 //generate styles base on attributes array
 const styles = ALL_PERSONALIZATION_ATTRIBUTES.map(
   (attr) => `[${attr}]:not([${PERSONALIZATION_FLAG}="true"]) {
-          opacity: 0 !important; /* Hide elements until personalization is applied */bin.usr-is-merged/
+          opacity: 0 !important; /* Hide elements until personalization is applied */
         }`,
-).join(",\n");
+).join("\n");
 style.textContent = styles;
 // Append the style to the head
 document.head.appendChild(style);
