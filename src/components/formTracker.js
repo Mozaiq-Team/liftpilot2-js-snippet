@@ -1,94 +1,119 @@
 import { sendEvent } from "./trackerCore.js";
 
-// Common selectors
-const SELECTORS = {
-  NAME: 'input[name="name"]',
-  FIRST_NAME: ['input[name="firstName"]', 'input[name="first_name"]'],
-  LAST_NAME: ['input[name="lastName"]', 'input[name="last_name"]'],
-  FULL_NAME: ['input[name="fullName"]', 'input[name="full_name"]'],
-  COMPANY: ['input[name="company"]', 'input[name="company_name"]'],
-  EMAIL: 'input[type="email"]',
-};
+// Helper to safely get trimmed input value
+function getTrimmedValue(input) {
+  if (!input) return "";
 
-// Helper to safely get trimmed input value by selector(s)
-function getTrimmedValue(form, selector) {
-  if (Array.isArray(selector)) {
-    for (const sel of selector) {
-      const value = getTrimmedValue(form, sel);
-      if (value) return value;
+  // Handle different input types
+  switch (input.type) {
+    case "checkbox":
+    case "radio":
+      return input.checked ? input.value || "true" : "";
+    case "select-one":
+    case "select-multiple":
+      if (input.multiple) {
+        return Array.from(input.selectedOptions)
+          .map((option) => option.value)
+          .filter(Boolean)
+          .join(", ");
+      }
+      return input.value?.trim() ?? "";
+    case "file":
+      return input.files?.length ? `${input.files.length} file(s)` : "";
+    default:
+      return input.value?.trim() ?? "";
+  }
+}
+
+// Get all form fields and their values - no validation
+function getAllFormFields(form) {
+  const fields = {};
+
+  // Query for all form input elements
+  const formElements = form.querySelectorAll(
+    'input, select, textarea, [contenteditable="true"]',
+  );
+
+  formElements.forEach((element) => {
+    // Skip certain input types that shouldn't be tracked
+    if (
+      element.type === "password" ||
+      element.type === "hidden" ||
+      element.type === "submit" ||
+      element.type === "reset" ||
+      element.type === "button"
+    ) {
+      return;
     }
-    return "";
-  }
-  const input = form.querySelector(selector);
-  return input?.value?.trim() ?? "";
+
+    // Get field identifier (prefer name, fallback to id, then generate one)
+    const fieldName =
+      element.name ||
+      element.id ||
+      element.getAttribute("data-field") ||
+      `field_${element.tagName.toLowerCase()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Skip if no valid field name
+    if (!fieldName) return;
+
+    const value = getTrimmedValue(element);
+
+    // Include ANY field that has a value - no validation
+    if (value) {
+      // Handle multiple fields with same name (like radio groups)
+      if (fields[fieldName]) {
+        // Convert to array if multiple values exist
+        if (Array.isArray(fields[fieldName])) {
+          fields[fieldName].push(value);
+        } else {
+          fields[fieldName] = [fields[fieldName], value];
+        }
+      } else {
+        fields[fieldName] = value;
+      }
+    }
+  });
+
+  return fields;
 }
 
-// Determine the "name" value from the form
-function extractNameValue(form) {
-  // 1) Try a single "name" field first
-  const nameValue = getTrimmedValue(form, SELECTORS.NAME);
-  if (nameValue) return nameValue;
-
-  // 2) Next, try firstName + lastName
-  const firstName = getTrimmedValue(form, SELECTORS.FIRST_NAME);
-  const lastName = getTrimmedValue(form, SELECTORS.LAST_NAME);
-  if (firstName || lastName) {
-    return [firstName, lastName].filter(Boolean).join(" ");
-  }
-
-  // 3) If neither first/last pair, try fullName
-  return getTrimmedValue(form, SELECTORS.FULL_NAME);
-}
-
-// Validate form data before sending
-function validateFormData(data) {
+// Simple form data structure
+function structureFormData(formId, fields) {
   return {
-    formId: data.formId || "unknown",
-    fields: {
-      name: data.fields.name || "",
-      email: data.fields.email || "",
-      company: data.fields.company || "",
-    },
+    formId: formId || "unknown",
+    fields: fields,
   };
 }
 
-// Extract form data
+// Extract all form data
 function extractFormData(form) {
-  const emailValue = getTrimmedValue(form, SELECTORS.EMAIL);
-  const nameValue = extractNameValue(form);
-  const companyName = getTrimmedValue(form, SELECTORS.COMPANY);
+  const allFields = getAllFormFields(form);
 
-  // Only process if at least one field has data
-  if (nameValue || emailValue || companyName) {
-    return validateFormData({
-      formId: form.id,
-      fields: {
-        name: nameValue,
-        email: emailValue,
-        company: companyName,
-      },
-    });
+  // Send if ANY field has data
+  if (Object.keys(allFields).length === 0) {
+    return null;
   }
-  return null;
+
+  return structureFormData(
+    form.id || form.name || `form_${Date.now()}`,
+    allFields,
+  );
 }
 
-// Track form data with original submit behavior
-async function trackFormSubmission(form, originalSubmitHandler) {
+// Track form data without blocking submission
+function trackFormSubmission(form) {
   try {
     const formData = extractFormData(form);
     if (formData) {
-      // Send tracking event and wait for completion
-      await sendEvent("form_submit", formData);
-      console.log("Form tracking completed successfully");
+      // Send tracking event in parallel - don't wait for completion
+      sendEvent("form_submit", formData).catch((err) => {
+        console.error("Form tracking failed:", err);
+      });
+      console.log("Form tracking initiated (non-blocking):", formData);
     }
   } catch (error) {
-    console.error("Form tracking failed:", error);
-    // Continue with form submission even if tracking fails
-  } finally {
-    // Always proceed with original form submission
-    if (originalSubmitHandler) {
-      originalSubmitHandler();
-    }
+    console.error("Form tracking error:", error);
+    // Fail silently - don't impact form submission
   }
 }
 
@@ -99,50 +124,27 @@ function setupFormTracking() {
   if (_formTrackingInitialized) return;
   _formTrackingInitialized = true;
 
-  // Method 1: Intercept submit events and delay them
+  // Method 1: Non-blocking submit event tracking
   document.addEventListener(
     "submit",
-    async (e) => {
+    (e) => {
       const form = e.target;
       if (!(form instanceof HTMLFormElement)) return;
-      if (trackedForms.has(form)) return; // Avoid double processing
+      if (trackedForms.has(form)) return;
 
-      // Prevent the default submission
-      e.preventDefault();
-      e.stopImmediatePropagation();
+      // Don't prevent default - let form submit normally
+      console.log("Form submission detected, tracking in parallel...");
 
-      console.log("Form submission intercepted, tracking data...");
-
-      // Create a function to continue with original submission
-      const continueSubmission = () => {
-        trackedForms.add(form); // Mark as processed
-
-        // Re-submit the form
-        if (form.action && form.method) {
-          // If form has action/method, submit normally
-          form.submit();
-        } else {
-          // If it's handled by JavaScript, dispatch a new submit event
-          const newEvent = new Event("submit", {
-            bubbles: true,
-            cancelable: true,
-          });
-          // Add a flag to identify this as our re-submission
-          newEvent._lpTracked = true;
-          form.dispatchEvent(newEvent);
-        }
-      };
-
-      // Track the form submission
-      await trackFormSubmission(form, continueSubmission);
+      // Track in parallel without blocking
+      trackFormSubmission(form);
     },
     { capture: true },
   );
 
-  // Method 2: Also watch for button clicks as backup
+  // Method 2: Button click tracking as backup
   document.addEventListener(
     "click",
-    async (e) => {
+    (e) => {
       const button = e.target;
 
       // Check if it's a submit button
@@ -153,12 +155,12 @@ function setupFormTracking() {
       ) {
         const form = button.form;
 
-        // Extract data immediately when button is clicked
+        // Track immediately when button is clicked (backup method)
         const formData = extractFormData(form);
         if (formData) {
-          console.log("Pre-submit form data captured:", formData);
+          console.log("Submit button clicked, tracking form data:", formData);
 
-          // Option: Send tracking immediately without waiting
+          // Send tracking immediately without blocking
           sendEvent("form_submit", formData).catch((err) => {
             console.error("Form tracking failed:", err);
           });
@@ -200,7 +202,7 @@ function setupFormTracking() {
   document.querySelectorAll("form").forEach(setupFormWatcher);
 }
 
-// Setup individual form watcher
+// Setup individual form watcher - non-blocking
 function setupFormWatcher(form) {
   if (trackedForms.has(form)) return;
   trackedForms.add(form);
@@ -209,35 +211,25 @@ function setupFormWatcher(form) {
   form.addEventListener("input", () => {
     const formData = extractFormData(form);
     if (formData) {
-      // Store the latest form data
+      // Store the latest form data for backup
       form._lpFormData = formData;
     }
   });
 
-  // Alternative: Override form.submit() method
+  // Override form.submit() method for programmatic submissions
   const originalSubmit = form.submit;
   form.submit = function () {
-    console.log("Form.submit() called, tracking data...");
+    console.log("Form.submit() called, tracking form data...");
 
-    const formData = extractFormData(this);
-    if (formData) {
-      // Send tracking event
-      sendEvent("form_submit", formData)
-        .catch((err) => {
-          console.error("Form tracking failed:", err);
-        })
-        .finally(() => {
-          // Call original submit
-          originalSubmit.call(this);
-        });
-    } else {
-      // No data to track, submit normally
-      originalSubmit.call(this);
-    }
+    // Track without blocking
+    trackFormSubmission(this);
+
+    // Immediately call original submit
+    originalSubmit.call(this);
   };
 }
 
-// Alternative approach: Non-blocking tracking
+// Non-blocking form tracking (recommended approach)
 function setupNonBlockingFormTracking() {
   document.addEventListener(
     "submit",
@@ -252,6 +244,7 @@ function setupNonBlockingFormTracking() {
         sendEvent("form_submit", formData).catch((err) => {
           console.error("Form tracking failed:", err);
         });
+        console.log("Form submitted, tracking in parallel:", formData);
       }
     },
     { capture: true },

@@ -18,6 +18,7 @@ import {
   AID_COOKIE_NAME,
   ALL_PERSONALIZATION_ATTRIBUTES,
   PERSONALIZATION_FLAG,
+  ENFORCE_IP_COOKIE_NAME,
 } from "../constants.js";
 import {
   _applyPersonalization,
@@ -129,6 +130,7 @@ async function sendEvent(name, data) {
 
   const userId = await getUserId();
   const aid = getCookie(AID_COOKIE_NAME);
+  const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
   const payload = { name, value: data };
 
   const headers = {
@@ -138,6 +140,10 @@ async function sendEvent(name, data) {
 
   if (aid) {
     headers["x-aid"] = aid;
+  }
+
+  if (enforcedIp) {
+    headers["x-ip"] = enforcedIp;
   }
 
   try {
@@ -215,6 +221,11 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
     headers["x-aid"] = aid;
   }
 
+  const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
+  if (enforcedIp) {
+    headers["x-ip"] = enforcedIp;
+  }
+
   try {
     const response = await fetch(url, {
       method: "GET",
@@ -262,6 +273,11 @@ async function getEvent({ name }, callback) {
 
     if (aid) {
       headers["x-aid"] = aid;
+    }
+
+    const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
+    if (enforcedIp) {
+      headers["x-ip"] = enforcedIp;
     }
 
     const response = await fetch(url, {
@@ -316,6 +332,11 @@ async function personalize(callback) {
 
     if (aid) {
       headers["x-aid"] = aid;
+    }
+
+    const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
+    if (enforcedIp) {
+      headers["x-ip"] = enforcedIp;
     }
 
     const response = await fetch(url, {
