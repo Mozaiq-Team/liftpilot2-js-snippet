@@ -4,10 +4,11 @@ import "whatwg-fetch";
 import "regenerator-runtime/runtime";
 
 import { getCookie, setCookie } from "./cookie.js";
-import { generateId } from "./idGenerator.js";
+import { generateId, generateVisitId } from "./idGenerator.js";
 import { setupRouteTracking } from "./routeTracker.js";
 import { setupFormTracking } from "./formTracker.js";
 import { setupInputTracking } from "./inputTracker.js";
+import { setupClickTracking } from "./clickTracker.js";
 import {
   initFingerprint,
   getVisitorId,
@@ -78,6 +79,8 @@ async function init(options) {
 
   // Setup route tracking
   setupRouteTracking();
+  // Setup click tracking
+  setupClickTracking();
   // Setup form tracking
   setupFormTracking();
   // Setup input tracking
@@ -128,10 +131,11 @@ async function sendEvent(name, data) {
     return Promise.reject(new Error("Event name must be a non-empty string"));
   }
 
+  const visitId = generateVisitId();
   const userId = await getUserId();
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
-  const payload = { name, value: data };
+  const payload = { name, value: { ...data, visitId } };
 
   const headers = {
     "Content-Type": "application/json",

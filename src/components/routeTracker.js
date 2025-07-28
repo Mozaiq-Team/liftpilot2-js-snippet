@@ -1,21 +1,33 @@
+import { generateVisitId } from "./idGenerator.js";
 import { sendEvent } from "./trackerCore.js";
+import { UAParser } from "ua-parser-js";
 
 let _initialized = false;
 let _cleanup = null;
 
+const parser = new UAParser();
+
 function _trackRouteChange() {
   try {
+    const device = parser.getResult();
+    if (device.device.type === undefined) {
+      device.device.type = "desktop"; // Default to desktop if type is not defined
+    }
+
+    const deviceType = {
+      browser: device.browser || "unknown",
+      device: device.device || { type: "unknown" },
+      os: device.os || { name: "unknown" },
+    };
+
     const fullPath =
       window.location.pathname + window.location.search + window.location.hash;
     const trackingData = {
       uri: fullPath,
       timestamp: new Date().toISOString(),
-      referrer: document.referrer,
+      previousURL: document.referrer,
       title: document.title,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      },
+      deviceType,
     };
 
     sendEvent("page_visit", trackingData).catch((err) => {
@@ -37,10 +49,12 @@ export function setupRouteTracking() {
       !window.addEventListener
     ) {
       console.warn(
-        "Page visit tracking requires history.pushState, history.replaceState, and window.addEventListener support."
+        "Page visit tracking requires history.pushState, history.replaceState, and window.addEventListener support.",
       );
       return;
     }
+
+    generateVisitId();
 
     const _origPush = history.pushState;
     history.pushState = function (...args) {

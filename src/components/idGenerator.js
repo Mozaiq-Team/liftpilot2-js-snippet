@@ -18,4 +18,14 @@ function generateId() {
   return ulid();
 }
 
-export { generateId };
+function generateVisitId() {
+  if (window.VISIT_ID) {
+    return window.VISIT_ID; // Return existing visit ID if available
+  }
+  // Generate a new visit ID
+  const visitId = generateId();
+  window.VISIT_ID = visitId; // Store it globally
+  return visitId;
+}
+
+export { generateId, generateVisitId };

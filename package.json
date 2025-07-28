@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.6.2",
+    "ua-parser-js": "^2.0.4",
     "ulid": "^2.4.0"
   }
 }
