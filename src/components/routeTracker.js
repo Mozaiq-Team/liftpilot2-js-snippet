@@ -14,11 +14,7 @@ function _trackRouteChange() {
       device.device.type = "desktop"; // Default to desktop if type is not defined
     }
 
-    const deviceType = {
-      browser: device.browser || "unknown",
-      device: device.device || { type: "unknown" },
-      os: device.os || { name: "unknown" },
-    };
+    const deviceType = device.device.type.toLowerCase();
 
     const fullPath =
       window.location.pathname + window.location.search + window.location.hash;
