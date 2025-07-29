@@ -29,6 +29,7 @@ import {
 let BASE_URL = "";
 
 let fingerprintEnabled = false;
+let _lastEventTimestamp = Date.now();
 
 /**
  * Set up a style element to hide elements until personalization is applied.
@@ -43,6 +44,28 @@ const styles = ALL_PERSONALIZATION_ATTRIBUTES.map(
 style.textContent = styles;
 // Append the style to the head
 document.head.appendChild(style);
+
+/**
+ * Start a passive heartbeat that sends visit duration updates.
+ */
+function startPassiveHeartbeat(intervalMs = 15000) {
+  setInterval(async () => {
+    const now = Date.now();
+    // Only send if no event sent in the last `intervalMs`
+    if (now - _lastEventTimestamp >= intervalMs) {
+      console.log(
+        "Last event sent at",
+        new Date(_lastEventTimestamp).toISOString(),
+      );
+      try {
+        await sendEvent("visit_duration_update");
+        _lastEventTimestamp = Date.now(); // Update timestamp on successful send
+      } catch (err) {
+        console.warn("Passive heartbeat failed:", err);
+      }
+    }
+  }, intervalMs);
+}
 
 /**
  * Initialize with a base URL and ensure LP_COOKIE exists.
@@ -85,6 +108,8 @@ async function init(options) {
   setupFormTracking();
   // Setup input tracking
   setupInputTracking();
+
+  startPassiveHeartbeat();
 }
 
 /**
@@ -170,6 +195,8 @@ async function sendEvent(name, data) {
       // If the response aid is different, update the cookie
       setCookie(AID_COOKIE_NAME, responseAid);
     }
+
+    _lastEventTimestamp = Date.now();
   } catch (error) {
     console.error("Error sending event:", error);
     throw error; // Re-throw to allow caller to handle
@@ -178,11 +205,11 @@ async function sendEvent(name, data) {
 
 /**
  * Query events via GET <baseUrl>/events?… , including LP_COOKIE in header.
- * @param {Object} queryParams  (e.g. { name: "foo", limit: 10, offset: 0 })
+ * @param {Object} queryParams  (e.g. { name: "foo", limit: 11, offset: 0 })
  * @param {Object} filter  (e.g. { uri: "/pricing", source: "google" })
  * @returns {Promise<any>}
  */
-async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
+async function getEvents({ name, limit = 11, offset = 0 }, filter = {}) {
   if (!BASE_URL) {
     throw new Error(
       "Liftpilot Event Tracking is not initialized. Call init() first.",
@@ -210,7 +237,7 @@ async function getEvents({ name, limit = 10, offset = 0 }, filter = {}) {
   });
 
   // Only add filter if it has properties
-  if (Object.keys(filter).length > 0) {
+  if (Object.keys(filter).length > 1) {
     params.append("filter", JSON.stringify(filter));
   }
 
