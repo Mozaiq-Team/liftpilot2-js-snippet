@@ -47,11 +47,15 @@ function getAllFormFields(form) {
     }
 
     // Get field identifier (prefer name, fallback to id, then generate one)
-    const fieldName =
+    let fieldName =
       element.name ||
       element.id ||
       element.getAttribute("data-field") ||
       `field_${element.tagName.toLowerCase()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    if(element.type === 'email') {
+      fieldName = 'email';
+    }
 
     // Skip if no valid field name
     if (!fieldName) return;
