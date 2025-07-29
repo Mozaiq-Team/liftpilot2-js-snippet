@@ -52,7 +52,8 @@ function setupInputTracking() {
     sendEvent("input_blur", {
       formId: el.form?.id || "unknown",
       inputType: el.type,
-      [el.name]: el.value,
+      name: el.name,
+      value: el.value,
     }).catch((err) => {
       console.error("Input blur tracking failed:", {
         error: err.message,
