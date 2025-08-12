@@ -117,7 +117,7 @@ async function init(options) {
  * Get user identification using hybrid approach (cookie + fingerprint fallback)
  * @returns {Promise<string>} User ID
  */
-async function getUserId() {
+function getUserId() {
   // Try cookie first - now cached by getCookie function
   const cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
@@ -127,7 +127,7 @@ async function getUserId() {
   // If no cookie and fingerprinting is enabled, use fingerprint
   if (fingerprintEnabled && isAvailable()) {
     try {
-      const fingerprintId = await getVisitorId();
+      const fingerprintId = getVisitorId();
       if (fingerprintId) {
         return `fp_${fingerprintId}`;
       }
@@ -158,7 +158,7 @@ async function sendEvent(name, data) {
   }
 
   const visitId = generateVisitId();
-  const userId = await getUserId();
+  const userId = getUserId();
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
   const payload = { name, value: { ...data, visitId } };
