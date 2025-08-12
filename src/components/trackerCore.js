@@ -94,25 +94,27 @@ async function init(options) {
   }
 
   // If LP_COOKIE doesn't exist yet, generate and set it.
-  console.log(`[init] ${performance.now()}: checking for existing CID cookie`);
   let cookieVal = getCookie(CID_COOKIE_NAME);
-  console.log(`[init] ${performance.now()}: getCookie(CID_COOKIE_NAME) returned: ${cookieVal}`);
   if (!cookieVal) {
     cookieVal = generateId();
-    console.log(`[init] ${performance.now()}: generated new CID: ${cookieVal}`);
     setCookie(CID_COOKIE_NAME, cookieVal);
-    console.log(`[init] ${performance.now()}: setCookie(CID_COOKIE_NAME, ${cookieVal}) completed`);
   }
 
 
-  // Setup route tracking
-  setupRouteTracking();
-  // Setup click tracking
-  setupClickTracking();
-  // Setup form tracking
-  setupFormTracking();
-  // Setup input tracking
-  setupInputTracking();
+  // Setup tracking after cookie is fully initialized
+  await new Promise(resolve => {
+    // Ensure cookie operation is complete and cached
+    const finalCookieVal = getCookie(CID_COOKIE_NAME);
+    console.log(`[init] ${performance.now()}: verified cookie before setup: ${finalCookieVal}`);
+    resolve();
+  }).then(() => {
+    console.log(`[init] ${performance.now()}: starting tracking setup`);
+    setupRouteTracking();
+    setupClickTracking();
+    setupFormTracking();
+    setupInputTracking();
+    console.log(`[init] ${performance.now()}: tracking setup completed`);
+  });
 
   startPassiveHeartbeat();
 }
@@ -122,12 +124,9 @@ async function init(options) {
  * @returns {Promise<string>} User ID
  */
 function getUserId() {
-  console.log(`[getUserId] ${performance.now()}: starting getUserId`);
   // Try cookie first - now cached by getCookie function
   let cookieVal = getCookie(CID_COOKIE_NAME);
-  console.log(`[getUserId] ${performance.now()}: getCookie(CID_COOKIE_NAME) returned: ${cookieVal}`);
   if (cookieVal) {
-    console.log(`[getUserId] ${performance.now()}: returning existing cookie value: ${cookieVal}`);
     return cookieVal;
   }
 
@@ -136,7 +135,6 @@ function getUserId() {
     try {
       const fingerprintId = getVisitorId();
       if (fingerprintId) {
-        console.log(`[getUserId] ${performance.now()}: returning fingerprint ID: fp_${fingerprintId}`);
         return `fp_${fingerprintId}`;
       }
     } catch (error) {
@@ -146,12 +144,9 @@ function getUserId() {
 
   if (!cookieVal) {
     cookieVal = generateId();
-    console.log(`[getUserId] ${performance.now()}: generated new CID: ${cookieVal}`);
     setCookie(CID_COOKIE_NAME, cookieVal);
-    console.log(`[getUserId] ${performance.now()}: setCookie(CID_COOKIE_NAME, ${cookieVal}) completed`);
   }
 
-  console.log(`[getUserId] ${performance.now()}: returning: ${cookieVal}`);
   return cookieVal;
 }
 
@@ -172,10 +167,8 @@ async function sendEvent(name, data) {
     return Promise.reject(new Error("Event name must be a non-empty string"));
   }
 
-  console.log(`[sendEvent] ${performance.now()}: starting sendEvent for: ${name}`);
   const visitId = generateVisitId();
   const userId = getUserId();
-  console.log(`[sendEvent] ${performance.now()}: getUserId() returned: ${userId}`);
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
   const payload = { name, value: { ...data, visitId } };
@@ -207,9 +200,7 @@ async function sendEvent(name, data) {
 
     if (responseCid && responseCid !== userId) {
       // If the response cid is different, update the cookie
-      console.log(`[sendEvent] ${performance.now()}: server returned different CID, updating: ${responseCid}`);
       setCookie(CID_COOKIE_NAME, responseCid);
-      console.log(`[sendEvent] ${performance.now()}: setCookie(CID_COOKIE_NAME, ${responseCid}) completed`);
     }
     if (responseAid && responseAid !== aid) {
       // If the response aid is different, update the cookie
@@ -240,9 +231,7 @@ async function getEvents({ name, limit = 11, offset = 0 }, filter = {}) {
     throw new Error("Event name is required");
   }
 
-  console.log(`[getEvents] ${performance.now()}: starting getEvents`);
   const userId = await getUserId();
-  console.log(`[getEvents] ${performance.now()}: getUserId() returned: ${userId}`);
   if (!userId) {
     throw new Error(
       "No contact ID found. User tracking may not be initialized.",
@@ -315,9 +304,7 @@ async function getEvent({ name }, callback) {
   }
 
   try {
-    console.log(`[getEvent] ${performance.now()}: starting getEvent`);
     const userId = await getUserId();
-    console.log(`[getEvent] ${performance.now()}: getUserId() returned: ${userId}`);
     const aid = getCookie(AID_COOKIE_NAME);
     const url = `${BASE_URL}/event/${name}`;
 
@@ -376,9 +363,7 @@ async function personalize(callback) {
   }
 
   try {
-    console.log(`[personalize] ${performance.now()}: starting personalize`);
     const userId = await getUserId();
-    console.log(`[personalize] ${performance.now()}: getUserId() returned: ${userId}`);
     const aid = getCookie(AID_COOKIE_NAME);
     const url = `${BASE_URL}/personalization`;
 
@@ -415,9 +400,7 @@ async function personalize(callback) {
     }
     if (responseCid) {
       // If cid is present, set it as a cookie
-      console.log(`[personalize] ${performance.now()}: server returned CID, updating: ${responseCid}`);
       setCookie(CID_COOKIE_NAME, responseCid);
-      console.log(`[personalize] ${performance.now()}: setCookie(CID_COOKIE_NAME, ${responseCid}) completed`);
     }
 
     // Execute callback with resolved data
