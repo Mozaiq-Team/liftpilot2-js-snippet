@@ -30,6 +30,7 @@ let BASE_URL = "";
 
 let fingerprintEnabled = false;
 let _lastEventTimestamp = Date.now();
+let cachedUserId = null; // Shared cache for consistent CID
 
 /**
  * Set up a style element to hide elements until personalization is applied.
@@ -97,8 +98,14 @@ async function init(options) {
   let cookieVal = getCookie(CID_COOKIE_NAME);
   if (!cookieVal) {
     cookieVal = generateId();
+    // Cache the user ID to ensure consistency across requests
+    cachedUserId = cookieVal;
     setCookie(CID_COOKIE_NAME, cookieVal);
+  } else {
+    // Cache the user ID to ensure consistency across requests
+    cachedUserId = cookieVal;
   }
+
 
   // Setup route tracking
   setupRouteTracking();
@@ -117,9 +124,15 @@ async function init(options) {
  * @returns {Promise<string>} User ID
  */
 async function getUserId() {
+  // Return cached value if available
+  if (cachedUserId) {
+    return cachedUserId;
+  }
+
   // Try cookie first
   const cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
+    cachedUserId = cookieVal;
     return cookieVal;
   }
 
@@ -128,15 +141,20 @@ async function getUserId() {
     try {
       const fingerprintId = await getVisitorId();
       if (fingerprintId) {
-        return `fp_${fingerprintId}`;
+        const fpId = `fp_${fingerprintId}`;
+        cachedUserId = fpId;
+        return fpId;
       }
     } catch (error) {
       console.warn("Failed to get fingerprint ID:", error);
     }
   }
 
-  // Last resort: generate new ID (but it won't persist without cookies)
-  return generateId();
+  // Last resort: generate new ID and cache it
+  if (!cachedUserId) {
+    cachedUserId = generateId();
+  }
+  return cachedUserId;
 }
 
 /**
@@ -188,8 +206,9 @@ async function sendEvent(name, data) {
     }
 
     if (responseCid && responseCid !== userId) {
-      // If the response cid is different, update the cookie
+      // If the response cid is different, update the cookie and cache
       setCookie(CID_COOKIE_NAME, responseCid);
+      cachedUserId = responseCid;
     }
     if (responseAid && responseAid !== aid) {
       // If the response aid is different, update the cookie
@@ -388,8 +407,9 @@ async function personalize(callback) {
       setCookie(AID_COOKIE_NAME, responseAid);
     }
     if (responseCid) {
-      // If cid is present, set it as a cookie
+      // If cid is present, set it as a cookie and update cache
       setCookie(CID_COOKIE_NAME, responseCid);
+      cachedUserId = responseCid;
     }
 
     // Execute callback with resolved data
