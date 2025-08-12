@@ -17,14 +17,9 @@ function getCookie(name) {
     throw new Error("Cookie name must be a string");
   }
 
-  const microtime = performance.now();
-  console.log(`getCookie(${name}) at ${microtime}`);
-
   // Check cache first
   if (cookieCache.has(name)) {
-    const value = cookieCache.get(name);
-    console.log(`getCookie(${name}) from cache: ${value}`);
-    return value;
+    return cookieCache.get(name);
   }
 
   const matches = document.cookie.match(
@@ -33,8 +28,6 @@ function getCookie(name) {
     ),
   );
   const value = matches ? decodeURIComponent(matches[1]) : null;
-  
-  console.log(`getCookie(${name}) from document.cookie: ${value}`);
   
   // Cache the result
   cookieCache.set(name, value);
@@ -58,15 +51,11 @@ function setCookie(name, value, options = {}) {
     throw new Error("Cookie name and value must be strings");
   }
   
-  const microtime = performance.now();
-  console.log(`setCookie(${name}, ${value}) at ${microtime}`);
-  
   // Auto-detect if we should use secure based on protocol
   const isHttps = window.location.protocol === "https:";
 
   // Update cache
   cookieCache.set(name, value);
-  console.log(`setCookie(${name}) updated cache with: ${value}`);
 
   const {
     days = 365,
