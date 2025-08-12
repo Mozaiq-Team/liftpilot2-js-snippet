@@ -82,10 +82,10 @@ function setCookie(name, value, options = {}) {
     cookie += `; samesite=${sameSite}`;
   }
 
-  document.cookie = cookie;
-  
   // Update cache
   cookieCache.set(name, value);
+
+  document.cookie = cookie;
 }
 
 /**
@@ -99,10 +99,11 @@ function deleteCookie(name, options = {}) {
     throw new Error("Cookie name must be a string");
   }
 
-  setCookie(name, "", { ...options, days: -1 });
-  
   // Remove from cache
   cookieCache.delete(name);
+
+  setCookie(name, "", { ...options, days: -1 });
+
 }
 
 export { getCookie, setCookie, deleteCookie };
