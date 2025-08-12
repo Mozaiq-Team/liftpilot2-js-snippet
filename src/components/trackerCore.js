@@ -105,15 +105,12 @@ async function init(options) {
   await new Promise(resolve => {
     // Ensure cookie operation is complete and cached
     const finalCookieVal = getCookie(CID_COOKIE_NAME);
-    console.log(`[init] ${performance.now()}: verified cookie before setup: ${finalCookieVal}`);
     resolve();
   }).then(() => {
-    console.log(`[init] ${performance.now()}: starting tracking setup`);
     setupRouteTracking();
     setupClickTracking();
     setupFormTracking();
     setupInputTracking();
-    console.log(`[init] ${performance.now()}: tracking setup completed`);
   });
 
   startPassiveHeartbeat();
