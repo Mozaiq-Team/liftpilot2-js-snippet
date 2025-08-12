@@ -119,7 +119,7 @@ async function init(options) {
  */
 function getUserId() {
   // Try cookie first - now cached by getCookie function
-  const cookieVal = getCookie(CID_COOKIE_NAME);
+  let cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
     return cookieVal;
   }
@@ -136,8 +136,12 @@ function getUserId() {
     }
   }
 
-  // Last resort: generate new ID (but it won't persist without cookies)
-  return generateId();
+  if (!cookieVal) {
+    cookieVal = generateId();
+    setCookie(CID_COOKIE_NAME, cookieVal);
+  }
+
+  return cookieVal;
 }
 
 /**
