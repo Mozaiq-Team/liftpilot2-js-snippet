@@ -52,7 +52,7 @@ function startPassiveHeartbeat(intervalMs = 15000) {
   setInterval(async () => {
     const now = Date.now();
     // Only send if no event sent in the last `intervalMs`
-    if (now - _lastEventTimestamp > intervalMs) {
+    if (now - _lastEventTimestamp > (intervalMs - 100)) {
       console.log(
         "Last event sent at",
         new Date(_lastEventTimestamp).toISOString(),
