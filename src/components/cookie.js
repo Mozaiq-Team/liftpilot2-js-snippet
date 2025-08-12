@@ -3,6 +3,9 @@
  * @module cookie
  */
 
+// Cookie cache for improved performance
+const cookieCache = new Map();
+
 /**
  * Read a cookie by name.
  * @param {string} name - The name of the cookie to read
@@ -14,12 +17,21 @@ function getCookie(name) {
     throw new Error("Cookie name must be a string");
   }
 
+  // Check cache first
+  if (cookieCache.has(name)) {
+    return cookieCache.get(name);
+  }
+
   const matches = document.cookie.match(
     new RegExp(
       "(?:^|; )" + name.replace(/([.$?*|{}()[]\\\/+^])/g, "\\$1") + "=([^;]*)",
     ),
   );
-  return matches ? decodeURIComponent(matches[1]) : null;
+  const value = matches ? decodeURIComponent(matches[1]) : null;
+  
+  // Cache the result
+  cookieCache.set(name, value);
+  return value;
 }
 
 /**
@@ -71,6 +83,9 @@ function setCookie(name, value, options = {}) {
   }
 
   document.cookie = cookie;
+  
+  // Update cache
+  cookieCache.set(name, value);
 }
 
 /**
@@ -85,6 +100,9 @@ function deleteCookie(name, options = {}) {
   }
 
   setCookie(name, "", { ...options, days: -1 });
+  
+  // Remove from cache
+  cookieCache.delete(name);
 }
 
 export { getCookie, setCookie, deleteCookie };
