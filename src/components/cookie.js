@@ -53,6 +53,9 @@ function setCookie(name, value, options = {}) {
   // Auto-detect if we should use secure based on protocol
   const isHttps = window.location.protocol === "https:";
 
+  // Update cache
+  cookieCache.set(name, value);
+
   const {
     days = 365,
     path = "/",
@@ -81,9 +84,6 @@ function setCookie(name, value, options = {}) {
   if (sameSite) {
     cookie += `; samesite=${sameSite}`;
   }
-
-  // Update cache
-  cookieCache.set(name, value);
 
   document.cookie = cookie;
 }
