@@ -4,7 +4,8 @@ import path from "path";
 
 export default defineConfig({
   build: {
-    target: "es2015", // Vite’s default for bundling, Babel will handle ES5 transpilation
+    target: "es2015", // Vite's default for bundling, Babel will handle ES5 transpilation
+    minify: false, // Disable minification for production build
     lib: {
       entry: path.resolve(__dirname, "src/index.js"),
       name: "LPTracker",
