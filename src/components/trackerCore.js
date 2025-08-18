@@ -120,7 +120,7 @@ async function init(options) {
  * Get user identification using hybrid approach (cookie + fingerprint fallback)
  * @returns {Promise<string>} User ID
  */
-function getUserId() {
+async function getUserId() {
   // Try cookie first - now cached by getCookie function
   let cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
@@ -165,10 +165,19 @@ async function sendEvent(name, data) {
   }
 
   const visitId = generateVisitId();
-  const userId = getUserId();
+  const userId = await getUserId();
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
-  const payload = { name, value: { ...data, visitId } };
+  
+  // If data is scalar (not an object), wrap it in a value property
+  let eventData;
+  if (data === null || data === undefined || typeof data !== 'object' || Array.isArray(data)) {
+    eventData = { value: data, visitId };
+  } else {
+    eventData = { ...data, visitId };
+  }
+  
+  const payload = { name, value: eventData };
 
   const headers = {
     "Content-Type": "application/json",
@@ -192,7 +201,7 @@ async function sendEvent(name, data) {
     const responseJson = await res.json();
     const { ok, cid: responseCid, aid: responseAid } = responseJson || {};
     if (ok === false) {
-      throw new Error(`Failed to send event: ${response.statusText}`);
+      throw new Error(`Failed to send event: ${res.statusText}`);
     }
 
     if (responseCid && responseCid !== userId) {
@@ -330,12 +339,21 @@ async function getEvent({ name }, callback) {
 
     const responseJson = await response.json();
 
-    // Execute callback with resolved data
-    if (callback) {
-      callback(responseJson);
+    // If event has only 'value' and 'visitId' properties, return just the value
+    let processedResponse = responseJson;
+    if (responseJson && responseJson.value && typeof responseJson.value === 'object') {
+      const keys = Object.keys(responseJson.value);
+      if (keys.length === 2 && keys.includes('value') && keys.includes('visitId')) {
+        processedResponse = responseJson.value.value;
+      }
     }
 
-    return responseJson;
+    // Execute callback with processed data
+    if (callback) {
+      callback(processedResponse);
+    }
+
+    return processedResponse;
   } catch (error) {
     console.error("Error in getEvent:", error);
     throw error; // Re-throw to allow caller to handle
