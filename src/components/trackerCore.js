@@ -27,62 +27,64 @@ import {
 } from "./personalization.js";
 
 let BASE_URL = "";
-
 let fingerprintEnabled = false;
 let _lastEventTimestamp = Date.now();
-let _heartbeatInterval = null; // Track the interval ID
+let _heartbeatInterval = null;
+let _isHeartbeatRunning = false;
 
 /**
  * Set up a style element to hide elements until personalization is applied.
  */
 const style = document.createElement("style");
-//generate styles base on attributes array
 const styles = ALL_PERSONALIZATION_ATTRIBUTES.map(
   (attr) => `[${attr}]:not([${PERSONALIZATION_FLAG}="true"]) {
-          opacity: 0 !important; /* Hide elements until personalization is applied */
+          opacity: 0 !important;
         }`,
 ).join("\n");
 style.textContent = styles;
-// Append the style to the head
 document.head.appendChild(style);
 
 /**
  * Start a passive heartbeat that sends visit duration updates.
- * Ensures only one heartbeat runs at a time.
  */
 function startPassiveHeartbeat(intervalMs = 15000) {
-  // Clear any existing heartbeat to prevent multiple intervals
   if (_heartbeatInterval) {
     clearInterval(_heartbeatInterval);
     _heartbeatInterval = null;
   }
 
-  _heartbeatInterval = setInterval(async () => {
+  _heartbeatInterval = setInterval(() => {
+    if (_isHeartbeatRunning) {
+      return;
+    }
+
     const now = Date.now();
-    // Only send if no event sent in the last `intervalMs`
     if (now - _lastEventTimestamp > intervalMs - 100) {
-      console.log(
-        "Last event sent at",
-        new Date(_lastEventTimestamp).toISOString(),
-      );
-      try {
-        await sendEvent("visit_duration_update");
-        // Note: _lastEventTimestamp will be updated in sendEvent
-      } catch (err) {
-        console.warn("Passive heartbeat failed:", err);
-      }
+      _isHeartbeatRunning = true;
+
+      sendEvent("visit_duration_update")
+        .then(() => {
+          _lastEventTimestamp = Date.now();
+        })
+        .catch((err) => {
+          console.warn("Passive heartbeat failed:", err);
+        })
+        .finally(() => {
+          _isHeartbeatRunning = false;
+        });
     }
   }, intervalMs);
 }
 
 /**
- * Stop the passive heartbeat (useful for cleanup)
+ * Stop the passive heartbeat.
  */
 function stopPassiveHeartbeat() {
   if (_heartbeatInterval) {
     clearInterval(_heartbeatInterval);
     _heartbeatInterval = null;
   }
+  _isHeartbeatRunning = false;
 }
 
 /**
@@ -96,13 +98,11 @@ async function init(options) {
     );
   }
 
-  // Stop any existing heartbeat before reinitializing
   stopPassiveHeartbeat();
 
-  BASE_URL = options.url.replace(/\/$/, ""); // remove trailing slash
-  fingerprintEnabled = options.fingerprintFallback !== false; // default to true
+  BASE_URL = options.url.replace(/\/$/, "");
+  fingerprintEnabled = options.fingerprintFallback !== false;
 
-  // Initialize fingerprinting if enabled
   if (fingerprintEnabled) {
     try {
       await initFingerprint({ debug: options.debug || false });
@@ -115,16 +115,13 @@ async function init(options) {
     }
   }
 
-  // If LP_COOKIE doesn't exist yet, generate and set it.
   let cookieVal = getCookie(CID_COOKIE_NAME);
   if (!cookieVal) {
     cookieVal = generateId();
     setCookie(CID_COOKIE_NAME, cookieVal);
   }
 
-  // Setup tracking after cookie is fully initialized
   await new Promise((resolve) => {
-    // Ensure cookie operation is complete and cached
     const finalCookieVal = getCookie(CID_COOKIE_NAME);
     resolve();
   }).then(() => {
@@ -134,9 +131,7 @@ async function init(options) {
     setupInputTracking();
   });
 
-  // Reset timestamp when initializing to prevent immediate heartbeat
   _lastEventTimestamp = Date.now();
-
   startPassiveHeartbeat();
 }
 
@@ -145,13 +140,11 @@ async function init(options) {
  * @returns {Promise<string>} User ID
  */
 async function getUserId() {
-  // Try cookie first - now cached by getCookie function
   let cookieVal = getCookie(CID_COOKIE_NAME);
   if (cookieVal) {
     return cookieVal;
   }
 
-  // If no cookie and fingerprinting is enabled, use fingerprint
   if (fingerprintEnabled && isAvailable()) {
     try {
       const fingerprintId = getVisitorId();
@@ -174,7 +167,6 @@ async function getUserId() {
 /**
  * Send an event payload to POST <baseUrl>/events, including LP_COOKIE in header.
  * @param {string} name
- * @param {string} type
  * @param {any} data
  * @returns {Promise<any>}
  */
@@ -193,7 +185,6 @@ async function sendEvent(name, data) {
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
 
-  // If data is scalar (not an object), wrap it in a value property
   let eventData;
   if (
     data === null ||
@@ -234,18 +225,16 @@ async function sendEvent(name, data) {
     }
 
     if (responseCid && responseCid !== userId) {
-      // If the response cid is different, update the cookie
       setCookie(CID_COOKIE_NAME, responseCid);
     }
     if (responseAid && responseAid !== aid) {
-      // If the response aid is different, update the cookie
       setCookie(AID_COOKIE_NAME, responseAid);
     }
 
     _lastEventTimestamp = Date.now();
   } catch (error) {
     console.error("Error sending event:", error);
-    throw error; // Re-throw to allow caller to handle
+    throw error;
   }
 }
 
@@ -275,14 +264,12 @@ async function getEvents({ name, limit = 11, offset = 0 }, filter = {}) {
 
   const aid = getCookie(AID_COOKIE_NAME);
 
-  // Build query parameters
   const params = new URLSearchParams({
     name,
     limit: limit.toString(),
     offset: offset.toString(),
   });
 
-  // Only add filter if it has properties
   if (Object.keys(filter).length > 1) {
     params.append("filter", JSON.stringify(filter));
   }
@@ -368,7 +355,6 @@ async function getEvent({ name }, callback) {
 
     const responseJson = await response.json();
 
-    // If event has only 'value' and 'visitId' properties, return just the value
     let processedResponse = responseJson;
     if (
       responseJson &&
@@ -385,7 +371,6 @@ async function getEvent({ name }, callback) {
       }
     }
 
-    // Execute callback with processed data
     if (callback) {
       callback(processedResponse);
     }
@@ -393,7 +378,7 @@ async function getEvent({ name }, callback) {
     return processedResponse;
   } catch (error) {
     console.error("Error in getEvent:", error);
-    throw error; // Re-throw to allow caller to handle
+    throw error;
   }
 }
 
@@ -447,37 +432,38 @@ async function personalize(callback) {
     const { data } = responseJson;
     const { aid: responseAid, cid: responseCid, personalization } = data || {};
     if (responseAid) {
-      // If aid is present, set it as a cookie
       setCookie(AID_COOKIE_NAME, responseAid);
     }
     if (responseCid) {
-      // If cid is present, set it as a cookie
       setCookie(CID_COOKIE_NAME, responseCid);
     }
 
-    // Execute callback with resolved data
     if (callback) {
       callback(responseJson);
       return;
     }
 
-    // If no callback, replace the dom elements with personalization data
     if (personalization) {
       if (document.readyState === "loading") {
-        // If document is still loading, wait for DOMContentLoaded
         document.addEventListener("DOMContentLoaded", () => {
           _applyPersonalization(personalization);
         });
       } else {
-        // If document is already loaded, apply personalization immediately
         _applyPersonalization(personalization);
       }
     }
   } catch (error) {
     console.error("Error in getPersonalizationData:", error);
     _clearPersonalizationFlags();
-    throw error; // Re-throw to allow caller to handle
+    throw error;
   }
 }
 
-export { init, sendEvent, getEvents, getEvent, personalize };
+export {
+  init,
+  sendEvent,
+  getEvents,
+  getEvent,
+  personalize,
+  stopPassiveHeartbeat,
+};
