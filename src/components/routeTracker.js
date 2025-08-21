@@ -4,20 +4,46 @@ import { UAParser } from "ua-parser-js";
 
 let _initialized = false;
 let _cleanup = null;
-
 const parser = new UAParser();
+
+function getDeviceType() {
+  // Check for iPad specifically first
+  if (/iPad/.test(navigator.userAgent)) {
+    return "tablet";
+  }
+
+  // Modern iPad detection (iPadOS 13+)
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+    return "tablet";
+  }
+
+  // Use UA-Parser for other devices
+  const device = parser.getResult();
+
+  // Handle mobile devices explicitly
+  if (
+    device.device.type === "mobile" ||
+    /Mobile|Android|iPhone/.test(navigator.userAgent)
+  ) {
+    return "mobile";
+  }
+
+  // Handle other tablets
+  if (device.device.type === "tablet") {
+    return "tablet";
+  }
+
+  // Default to desktop
+  return "desktop";
+}
 
 function _trackRouteChange() {
   try {
-    const device = parser.getResult();
-    if (device.device.type === undefined) {
-      device.device.type = "desktop"; // Default to desktop if type is not defined
-    }
-
-    const deviceType = device.device.type.toLowerCase();
+    const deviceType = getDeviceType();
 
     const fullPath =
       window.location.pathname + window.location.search + window.location.hash;
+
     const trackingData = {
       uri: fullPath,
       timestamp: new Date().toISOString(),
