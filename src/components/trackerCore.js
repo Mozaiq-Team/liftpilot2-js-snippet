@@ -29,8 +29,21 @@ import {
 let BASE_URL = "";
 let fingerprintEnabled = false;
 let _lastEventTimestamp = Date.now();
+let _lastHeartbeatTimestamp = Date.now();
 let _heartbeatInterval = null;
 let _isHeartbeatRunning = false;
+let _isNextJS = false;
+
+// Detect if running in Next.js environment
+function detectNextJS() {
+  return (
+    typeof window !== "undefined" &&
+    (window.__NEXT_DATA__ ||
+      window.next ||
+      document.querySelector("[data-nextjs-router]") ||
+      document.querySelector('script[src*="/_next/"]'))
+  );
+}
 
 /**
  * Set up a style element to hide elements until personalization is applied.
@@ -53,27 +66,64 @@ function startPassiveHeartbeat(intervalMs = 15000) {
     _heartbeatInterval = null;
   }
 
-  _heartbeatInterval = setInterval(() => {
-    if (_isHeartbeatRunning) {
-      return;
-    }
+  // Use a more reliable timing approach for Next.js
+  if (_isNextJS) {
+    // For Next.js, use absolute timing instead of relative timing
+    let heartbeatStartTime = Date.now();
+    let heartbeatCount = 0;
 
-    const now = Date.now();
-    if (now - _lastEventTimestamp > intervalMs - 100) {
-      _isHeartbeatRunning = true;
+    _heartbeatInterval = setInterval(() => {
+      if (_isHeartbeatRunning) {
+        return;
+      }
 
-      sendEvent("visit_duration_update")
-        .then(() => {
-          _lastEventTimestamp = Date.now();
-        })
-        .catch((err) => {
-          console.warn("Passive heartbeat failed:", err);
-        })
-        .finally(() => {
-          _isHeartbeatRunning = false;
-        });
-    }
-  }, intervalMs);
+      // Calculate when this heartbeat should fire based on absolute timing
+      const expectedTime =
+        heartbeatStartTime + (heartbeatCount + 1) * intervalMs;
+      const now = Date.now();
+
+      // Only fire if we're within reasonable timing window
+      if (now >= expectedTime - 1000) {
+        // 1 second tolerance
+        heartbeatCount++;
+        _isHeartbeatRunning = true;
+
+        sendEvent("visit_duration_update")
+          .then(() => {
+            _lastHeartbeatTimestamp = Date.now();
+          })
+          .catch((err) => {
+            console.warn("Passive heartbeat failed:", err);
+          })
+          .finally(() => {
+            _isHeartbeatRunning = false;
+          });
+      }
+    }, intervalMs);
+  } else {
+    // Original logic for non-Next.js environments
+    _heartbeatInterval = setInterval(() => {
+      if (_isHeartbeatRunning) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - _lastHeartbeatTimestamp > intervalMs - 100) {
+        _isHeartbeatRunning = true;
+
+        sendEvent("visit_duration_update")
+          .then(() => {
+            _lastHeartbeatTimestamp = Date.now();
+          })
+          .catch((err) => {
+            console.warn("Passive heartbeat failed:", err);
+          })
+          .finally(() => {
+            _isHeartbeatRunning = false;
+          });
+      }
+    }, intervalMs);
+  }
 }
 
 /**
@@ -97,6 +147,9 @@ async function init(options) {
       "Liftpilot Event Tracking init requires an options object with a url property",
     );
   }
+
+  // Detect environment and configure accordingly
+  _isNextJS = detectNextJS();
 
   stopPassiveHeartbeat();
 
@@ -132,6 +185,7 @@ async function init(options) {
   });
 
   _lastEventTimestamp = Date.now();
+  _lastHeartbeatTimestamp = Date.now(); // Reset both timestamps
   startPassiveHeartbeat();
 }
 
