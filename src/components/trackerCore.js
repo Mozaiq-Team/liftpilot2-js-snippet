@@ -30,6 +30,7 @@ let BASE_URL = "";
 
 let fingerprintEnabled = false;
 let _lastEventTimestamp = Date.now();
+let _heartbeatInterval = null; // Track the interval ID
 
 /**
  * Set up a style element to hide elements until personalization is applied.
@@ -47,24 +48,41 @@ document.head.appendChild(style);
 
 /**
  * Start a passive heartbeat that sends visit duration updates.
+ * Ensures only one heartbeat runs at a time.
  */
 function startPassiveHeartbeat(intervalMs = 15000) {
-  setInterval(async () => {
+  // Clear any existing heartbeat to prevent multiple intervals
+  if (_heartbeatInterval) {
+    clearInterval(_heartbeatInterval);
+    _heartbeatInterval = null;
+  }
+
+  _heartbeatInterval = setInterval(async () => {
     const now = Date.now();
     // Only send if no event sent in the last `intervalMs`
-    if (now - _lastEventTimestamp > (intervalMs - 100)) {
+    if (now - _lastEventTimestamp > intervalMs - 100) {
       console.log(
         "Last event sent at",
         new Date(_lastEventTimestamp).toISOString(),
       );
       try {
         await sendEvent("visit_duration_update");
-        _lastEventTimestamp = Date.now(); // Update timestamp on successful send
+        // Note: _lastEventTimestamp will be updated in sendEvent
       } catch (err) {
         console.warn("Passive heartbeat failed:", err);
       }
     }
   }, intervalMs);
+}
+
+/**
+ * Stop the passive heartbeat (useful for cleanup)
+ */
+function stopPassiveHeartbeat() {
+  if (_heartbeatInterval) {
+    clearInterval(_heartbeatInterval);
+    _heartbeatInterval = null;
+  }
 }
 
 /**
@@ -77,6 +95,10 @@ async function init(options) {
       "Liftpilot Event Tracking init requires an options object with a url property",
     );
   }
+
+  // Stop any existing heartbeat before reinitializing
+  stopPassiveHeartbeat();
+
   BASE_URL = options.url.replace(/\/$/, ""); // remove trailing slash
   fingerprintEnabled = options.fingerprintFallback !== false; // default to true
 
@@ -100,9 +122,8 @@ async function init(options) {
     setCookie(CID_COOKIE_NAME, cookieVal);
   }
 
-
   // Setup tracking after cookie is fully initialized
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     // Ensure cookie operation is complete and cached
     const finalCookieVal = getCookie(CID_COOKIE_NAME);
     resolve();
@@ -112,6 +133,9 @@ async function init(options) {
     setupFormTracking();
     setupInputTracking();
   });
+
+  // Reset timestamp when initializing to prevent immediate heartbeat
+  _lastEventTimestamp = Date.now();
 
   startPassiveHeartbeat();
 }
@@ -168,15 +192,20 @@ async function sendEvent(name, data) {
   const userId = await getUserId();
   const aid = getCookie(AID_COOKIE_NAME);
   const enforcedIp = getCookie(ENFORCE_IP_COOKIE_NAME);
-  
+
   // If data is scalar (not an object), wrap it in a value property
   let eventData;
-  if (data === null || data === undefined || typeof data !== 'object' || Array.isArray(data)) {
+  if (
+    data === null ||
+    data === undefined ||
+    typeof data !== "object" ||
+    Array.isArray(data)
+  ) {
     eventData = { value: data, visitId };
   } else {
     eventData = { ...data, visitId };
   }
-  
+
   const payload = { name, value: eventData };
 
   const headers = {
@@ -341,9 +370,17 @@ async function getEvent({ name }, callback) {
 
     // If event has only 'value' and 'visitId' properties, return just the value
     let processedResponse = responseJson;
-    if (responseJson && responseJson.value && typeof responseJson.value === 'object') {
+    if (
+      responseJson &&
+      responseJson.value &&
+      typeof responseJson.value === "object"
+    ) {
       const keys = Object.keys(responseJson.value);
-      if (keys.length === 2 && keys.includes('value') && keys.includes('visitId')) {
+      if (
+        keys.length === 2 &&
+        keys.includes("value") &&
+        keys.includes("visitId")
+      ) {
         processedResponse = responseJson.value.value;
       }
     }
