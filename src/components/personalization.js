@@ -18,6 +18,7 @@ import {
  * ALL_PERSONALIZATION_ATTRIBUTES and applies the corresponding values
  */
 function _applyPersonalization(personalizationObject) {
+  console.log("Applying personalization:", personalizationObject);
   ALL_PERSONALIZATION_ATTRIBUTES.forEach((attr) => {
     const elements = document.querySelectorAll(`[${attr}]`);
     elements.forEach((el) => {
@@ -29,6 +30,10 @@ function _applyPersonalization(personalizationObject) {
           }
           if (personalizationObject[key].copy) {
             el.textContent = personalizationObject[key].copy;
+            return;
+          }
+          if (personalizationObject[key].value) {
+            el.textContent = personalizationObject[key].value;
           }
         } else if (attr === PERSONALIZATION_ATTRIBUTE_SRC) {
           if (typeof personalizationObject[key] === "string") {
