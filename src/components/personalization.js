@@ -49,6 +49,8 @@ function _applyPersonalization(personalizationObject) {
           Object.entries(valueObj).forEach(([prop, value]) => {
             if (prop === "copy") {
               el.textContent = value;
+            } else if (prop === "value") {
+              el.textContent = value;
             } else if (prop === "src") {
               el.setAttribute("src", value);
             } else if (prop === "href") {
