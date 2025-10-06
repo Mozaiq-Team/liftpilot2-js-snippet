@@ -41,11 +41,13 @@ function _trackRouteChange() {
   try {
     const deviceType = getDeviceType();
 
-    const fullPath =
-      window.location.pathname + window.location.search + window.location.hash;
+    // const fullPath =
+    //   window.location.pathname + window.location.search + window.location.hash;
+
+    const basePath = window.location.pathname;
 
     const trackingData = {
-      uri: fullPath,
+      uri: basePath,
       timestamp: new Date().toISOString(),
       previousURL: document.referrer,
       title: document.title,
